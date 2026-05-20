@@ -79,6 +79,9 @@ body {
 .header-title {
   flex: 1;
   text-align: center;
+  white-space: nowrap;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .header-btn {
@@ -1188,6 +1191,53 @@ textarea {
   .player-cell{font-size:38px;}
   .mini-court .player-cell{font-size:34px;}
 }
+
+.input-panel {
+  margin-top: 14px;
+  padding-bottom: 170px;
+}
+.input-tab-panel { display: none; }
+.input-tab-panel.active { display: block; }
+.bottom-tabs {
+  position: sticky;
+  bottom: 112px;
+  z-index: 6;
+  max-width: 520px;
+  margin: 0 auto 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: white;
+  border: 1px solid #d9e3ff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.bottom-tab {
+  border: none;
+  background: white;
+  color: #555;
+  padding: 11px 4px;
+  font-size: 13px;
+  font-weight: 900;
+}
+.bottom-tab.active {
+  background: #1557e6;
+  color: white;
+}
+.compact-history-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.input-panel .stats-card,
+.input-panel .history,
+.input-panel .score-court-wrap {
+  margin-bottom: 12px;
+}
+
 </style>
 </head>
 
@@ -1226,7 +1276,7 @@ textarea {
     <div class="header" style="margin:0 -18px;">
       <div class="header-row">
         <button class="back-btn" onclick="requestGoList()">← 一覧に戻る</button>
-        <div class="header-title">Score Advance</div>
+        <div class="header-title">ADV</div>
         <button class="header-btn" onclick="saveMatch()">💾 保存</button>
       </div>
     </div>
@@ -1308,8 +1358,6 @@ textarea {
             </select>
           </div>
         </div>
-
-        <button class="start-btn" onclick="startMatch()">このセットを開始 / 設定更新</button>
       </div>
     </div>
 
@@ -1341,6 +1389,8 @@ textarea {
 <div style="margin-top:10px; font-size:12px; color:#666; font-weight:700;">
   黄色＝セッター位置（HOME開始ローテと連動）
 </div>
+
+<button class="start-btn" onclick="startMatch()">このセットを開始 / 設定更新</button>
   </div>
 </div>
 
@@ -1376,6 +1426,15 @@ textarea {
     </div>
 
     
+
+<div class="input-panel">
+  <div class="bottom-tabs">
+    <button class="bottom-tab active" id="courtTabBtn" onclick="setInputTab('court')">コート</button>
+    <button class="bottom-tab" id="historyTabBtn" onclick="setInputTab('history')">履歴</button>
+    <button class="bottom-tab" id="statsTabBtn" onclick="setInputTab('stats')">統計</button>
+  </div>
+
+  <div class="input-tab-panel active" id="courtPanel">
 <div class="score-court-wrap">
   <div class="score-court-title">現在のコート配置</div>
   
@@ -1399,8 +1458,12 @@ textarea {
       現在のローテ：<span id="currentRotation">ー</span>
     </div>
 
-    <div class="history-title">
-      <div>得点履歴（最新が上）</div>
+
+  </div>
+
+  <div class="input-tab-panel" id="historyPanel">
+    <div class="compact-history-title">
+      <div>得点履歴</div>
       <div style="text-align:right;">HOME/AWAY</div>
     </div>
 
@@ -1409,26 +1472,12 @@ textarea {
 
     <div class="history" id="history"></div>
 
-    <div class="fixed-actions">
-      <div class="main-buttons">
-        <button class="point-btn home-bg" onclick="openReasonModal('home')">HOME +1</button>
-        <button class="point-btn away-bg" onclick="openReasonModal('away')">AWAY +1</button>
-      </div>
 
-      <div class="sub-buttons">
-        <button class="sub-btn" onclick="undo()">↩ 1点戻す</button>
-        <button class="sub-btn" onclick="confirmResetMatch()">↻ リセット</button>
-      </div>
-    </div>
+  </div>
 
-    <div class="collapse" id="statsBox">
-      <div class="collapse-head" onclick="toggleStats()">
-        <span>📊 統計データを見る</span>
-        <span id="statsArrow">▼</span>
-      </div>
-
-      <div class="collapse-body">
-        <div class="stats-card">
+  <div class="input-tab-panel" id="statsPanel">
+    <div id="statsBox">
+<div class="stats-card">
           <div class="stats-main-tabs">
             <button class="stats-main-tab active" id="pointInfoTab" onclick="setStatsMode('point')">
               点数情報
@@ -1489,8 +1538,25 @@ textarea {
 
           <div id="graphStatsView" style="display:none;"></div>
         </div>
+</div>
+
+  </div>
+</div>
+
+    <div class="fixed-actions">
+      <div class="main-buttons">
+        <button class="point-btn home-bg" onclick="openReasonModal('home')">HOME +1</button>
+        <button class="point-btn away-bg" onclick="openReasonModal('away')">AWAY +1</button>
+      </div>
+
+      <div class="sub-buttons">
+        <button class="sub-btn" onclick="undo()">↩ 1点戻す</button>
+        <button class="sub-btn" onclick="confirmResetMatch()">↻ リセット</button>
       </div>
     </div>
+
+
+
   </div>
 
 </div>
@@ -1697,6 +1763,27 @@ function updateLiveCourt(){
 }
 
 
+
+
+let inputTab = "court";
+
+function setInputTab(tab) {
+  inputTab = tab;
+  const panels = {
+    court: document.getElementById("courtPanel"),
+    history: document.getElementById("historyPanel"),
+    stats: document.getElementById("statsPanel")
+  };
+  const buttons = {
+    court: document.getElementById("courtTabBtn"),
+    history: document.getElementById("historyTabBtn"),
+    stats: document.getElementById("statsTabBtn")
+  };
+  Object.keys(panels).forEach(key => {
+    if (panels[key]) panels[key].classList.toggle("active", key === tab);
+    if (buttons[key]) buttons[key].classList.toggle("active", key === tab);
+  });
+}
 
 function markDirty() {
   isDirty = true;

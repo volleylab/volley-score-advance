@@ -1,0 +1,4802 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Volley Score Advance</title>
+
+<meta name="theme-color" content="#1557e6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Volley Score Advance">
+<link rel="manifest" href="manifest.json">
+
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  background: #f4f4f6;
+  color: #111;
+}
+
+.app {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+@media (min-width: 700px) {
+  .app {
+    max-width: 820px;
+  }
+
+  .score-area {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .main-buttons,
+  .sub-buttons {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .history,
+  .stats-card,
+  .collapse {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.header {
+  background: #1557e6;
+  color: white;
+  padding: 24px 18px 18px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 900;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  flex: 1;
+  text-align: center;
+}
+
+.header-btn {
+  border: none;
+  background: white;
+  color: #1557e6;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.back-btn {
+  border: none;
+  background: none;
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.screen {
+  display: none;
+  padding: 0 18px 24px;
+}
+
+.screen.active {
+  display: block;
+}
+
+.header-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+}
+
+.header-sub h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.text-btn {
+  border: none;
+  background: none;
+  color: #1557e6;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.match-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.match-date {
+  color: #666;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.match-opponent {
+  font-size: 19px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.match-score {
+  font-size: 36px;
+  font-weight: 900;
+}
+
+.set-list,
+.set-summary,
+.stats-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.set-list { margin-top: 8px; }
+
+.set-summary {
+  margin-top: 8px;
+  justify-content: center;
+}
+
+.set-pill {
+  font-size: 13px;
+  font-weight: 900;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eee;
+}
+
+.home-text { color: #1557e6; }
+.away-text { color: #e91f26; }
+.gray-text { color: #666; }
+
+.home-bg { background: #1557e6; }
+.away-bg { background: #e91f26; }
+
+.delete-btn {
+  display: none;
+  border: none;
+  background: #ffe5e5;
+  color: #e91f26;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+}
+
+.edit-mode .delete-btn { display: block; }
+
+
+
+.transfer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.transfer-btn {
+  border: none;
+  background: #eef3ff;
+  color: #1557e6;
+  border-radius: 12px;
+  padding: 12px 10px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.transfer-btn.secondary {
+  background: #f1f1f1;
+  color: #222;
+}
+
+.export-match-btn {
+  border: none;
+  background: #eef3ff;
+  color: #1557e6;
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.match-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.share-check-wrap {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eef3ff;
+}
+
+.share-check {
+  width: 24px;
+  height: 24px;
+  accent-color: #1557e6;
+}
+
+.share-select-mode .share-check-wrap { display: flex; }
+.share-select-mode .export-match-btn,
+.share-select-mode .delete-btn { display: none; }
+.edit-mode .share-check-wrap,
+.edit-mode .export-match-btn { display: none; }
+
+.selection-actions {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: -4px 0 14px;
+}
+
+.selection-actions.show { display: grid; }
+
+.selection-count,
+.selection-export-btn {
+  grid-column: 1 / -1;
+}
+
+.selection-count {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #1557e6;
+  padding: 4px 0;
+}
+
+.selection-count {
+  grid-column: 1 / 3;
+  color: #555;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.new-btn {
+  position: sticky;
+  bottom: 14px;
+  width: 100%;
+  border: none;
+  background: #1557e6;
+  color: white;
+  border-radius: 14px;
+  padding: 18px;
+  font-size: 22px;
+  font-weight: 900;
+  margin-top: 18px;
+}
+
+.set-row { margin: 16px 0 10px; }
+
+.set-title {
+  text-align: center;
+  color: #1557e6;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.set-end-btn {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.collapse {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.collapse-head {
+  padding: 14px 16px;
+  font-size: 18px;
+  font-weight: 900;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collapse-body {
+  padding: 0 16px 16px;
+  display: none;
+}
+
+.collapse.open .collapse-body { display: block; }
+
+.setting-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+label {
+  font-size: 13px;
+  font-weight: 800;
+  display: block;
+  margin-bottom: 6px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  font-weight: 800;
+  background: white;
+}
+
+textarea {
+  min-height: 76px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.start-btn {
+  width: 100%;
+  margin-top: 14px;
+  border: none;
+  background: #1557e6;
+  color: white;
+  border-radius: 10px;
+  padding: 14px 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.score-area {
+  display: grid;
+  grid-template-columns: 1fr 34px 1fr;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.team-title {
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.score-box {
+  height: 100px;
+  border-radius: 12px;
+  color: white;
+  font-size: 58px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-box.serving {
+  transform: scale(1.03);
+  box-shadow: 0 0 0 4px rgba(21,87,230,0.18), 0 6px 14px rgba(0,0,0,0.2);
+}
+
+.score-box.away-serving {
+  box-shadow: 0 0 0 4px rgba(233,31,38,0.18), 0 6px 14px rgba(0,0,0,0.2);
+}
+
+.hyphen {
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.rotation-under {
+  font-size: 25px;
+  font-weight: 900;
+  margin-top: 8px;
+}
+
+.serve-dot {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.serve-label {
+  text-align: center;
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #eaf1ff;
+  color: #1557e6;
+  font-weight: 900;
+}
+
+.divider {
+  border: none;
+  border-top: 2px solid #ddd;
+  margin: 16px 0 10px;
+}
+
+.current-rotation {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  margin-bottom: 16px;
+}
+
+.history-title {
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.history-tab {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 13px;
+  font-weight: 900;
+  background: #eee;
+  color: #333;
+}
+
+.history-tab.active {
+  background: #1557e6;
+  color: white;
+}
+
+.history-view-note {
+  font-size: 12px;
+  color: #666;
+  font-weight: 800;
+  margin: -2px 0 8px;
+}
+
+.history {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 16px;
+  background: white;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 68px 1fr 92px;
+  align-items: center;
+  min-height: 54px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.history-row:last-child { border-bottom: none; }
+
+.badge {
+  color: white;
+  font-weight: 900;
+  font-size: 14px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.score-history {
+  text-align: center;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.reason-text {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+}
+
+.reason-text.home-text { color: #1557e6; }
+.reason-text.away-text { color: #e91f26; }
+.reason-text.gray-text { color: #666; }
+
+.history-rotation {
+  text-align: right;
+  font-size: 16px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.fixed-actions {
+  position: sticky;
+  bottom: 0;
+  background: #f7f7f7;
+  padding: 10px 0 12px;
+  z-index: 5;
+}
+
+.main-buttons,
+.sub-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.point-btn {
+  border: none;
+  color: white;
+  border-radius: 12px;
+  padding: 18px 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.sub-btn {
+  border: none;
+  background: #eee;
+  color: #222;
+  border-radius: 12px;
+  padding: 13px 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.stats-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 12px;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+}
+
+
+.stats-main-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background: #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.stats-main-tab {
+  border: none;
+  background: transparent;
+  padding: 12px 4px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #444;
+}
+
+.stats-main-tab.active {
+  background: #1557e6;
+  color: white;
+}
+
+.point-info-placeholder {
+  background: #f8f8f8;
+  border: 1px dashed #ccc;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  font-weight: 900;
+  color: #666;
+  margin-top: 12px;
+}
+
+
+.point-table {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  margin-top: 12px;
+}
+
+.point-head {
+  display: grid;
+  grid-template-columns: 72px 1fr 72px;
+  padding: 12px 8px;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  background: #f8f8f8;
+}
+
+.point-section-title {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 8px 6px;
+  font-weight: 900;
+  color: #1557e6;
+  text-align: center;
+}
+
+.point-section-title.mistake {
+  color: #e91f26;
+}
+
+.point-section-title::before,
+.point-section-title::after {
+  content: "";
+  height: 1px;
+  background: #ddd;
+}
+
+.point-row {
+  display: grid;
+  grid-template-columns: 72px 1fr 72px;
+  align-items: center;
+  min-height: 54px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.point-row:last-child {
+  border-bottom: none;
+}
+
+.point-label {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.point-num {
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.point-percent {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.compare-bar-wrap {
+  height: 8px;
+  border-radius: 999px;
+  background: #ddd;
+  overflow: hidden;
+  margin: 6px auto 0;
+  display: flex;
+  width: 100%;
+  max-width: 150px;
+}
+
+.compare-blue {
+  background: #1557e6;
+  height: 100%;
+}
+
+.compare-red {
+  background: #e91f26;
+  height: 100%;
+}
+
+.stats-tabs { margin: 12px 0; }
+
+.stats-tab {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  background: #eee;
+  color: #333;
+}
+
+.stats-tab.active {
+  background: #1557e6;
+  color: white;
+}
+
+.stats-top {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid #bcd0ff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 12px 0 16px;
+}
+
+.stats-box {
+  padding: 14px 4px;
+  text-align: center;
+  border-right: 1px solid #ddd;
+}
+
+.stats-box:last-child { border-right: none; }
+
+.stats-label {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.stats-value {
+  font-size: 34px;
+  font-weight: 900;
+  margin: 6px 0;
+}
+
+.stats-sub {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.stats-table th {
+  background: #f0f5ff;
+  padding: 9px 4px;
+  border: 1px solid #ddd;
+}
+
+.stats-table td {
+  text-align: center;
+  padding: 10px 4px;
+  border: 1px solid #ddd;
+  font-weight: 800;
+}
+
+.stats-table .best { background: #eef5ff; }
+
+.percent-main {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.percent-sub {
+  font-size: 12px;
+  color: #444;
+  margin-top: 2px;
+}
+
+.note {
+  font-size: 12px;
+  color: #444;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+
+.flow-card {
+  margin-top: 12px;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px 12px;
+}
+
+.flow-card-title {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flow-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f5ff;
+  color: #1557e6;
+  font-size: 16px;
+}
+
+.flow-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.flow-box {
+  border-radius: 14px;
+  padding: 14px 8px;
+  text-align: center;
+  background: #f6f7fb;
+}
+
+.flow-box.home {
+  background: #eef5ff;
+  border: 1px solid #cfe0ff;
+}
+
+.flow-box.away {
+  background: #fff1f1;
+  border: 1px solid #ffd0d0;
+}
+
+.flow-team {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.flow-big {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.1;
+  margin: 4px 0;
+}
+
+.flow-unit {
+  font-size: 14px;
+  font-weight: 900;
+  color: #222;
+  margin-left: 2px;
+}
+
+.flow-range {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.78);
+  font-size: 12px;
+  font-weight: 900;
+  color: #333;
+}
+
+.flow-lead-center {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8f8f8;
+  text-align: center;
+}
+
+.flow-lead-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.flow-lead-value {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.flow-point-list {
+  display: grid;
+  gap: 8px;
+}
+
+.flow-point-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.flow-point-tag {
+  text-align: center;
+  border-radius: 999px;
+  padding: 7px 6px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #eee;
+}
+
+.flow-point-tag.home {
+  background: #eef5ff;
+  color: #1557e6;
+}
+
+.flow-point-tag.away {
+  background: #fff1f1;
+  color: #e91f26;
+}
+
+.flow-point-text {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.flow-point-score {
+  display: inline-block;
+  margin-top: 3px;
+  color: #666;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.flow-empty {
+  padding: 22px 12px;
+  text-align: center;
+  color: #666;
+  font-weight: 900;
+}
+
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  align-items: flex-end;
+}
+
+.modal {
+  background: white;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  border-radius: 22px 22px 0 0;
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.modal-text {
+  color: #555;
+  margin-bottom: 18px;
+  font-weight: 700;
+}
+
+.reason-section {
+  text-align: left;
+  margin: 14px 0;
+}
+
+.reason-section-title {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.reason-option {
+  width: 100%;
+  border: 1px solid #c8d8ff;
+  background: #f4f8ff;
+  color: #1557e6;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: left;
+}
+
+.reason-option.away {
+  border-color: #ffc9c9;
+  background: #fff4f4;
+  color: #e91f26;
+}
+
+.danger-btn, .cancel-btn, .primary-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 19px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.danger-btn { background: #e91f26; color: white; }
+.primary-btn { background: #1557e6; color: white; }
+.cancel-btn { background: #eee; color: #111; }
+
+.offline-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 999;
+  background: #111;
+  color: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  display: none;
+}
+
+.offline-badge.show { display: block; }
+
+
+@media (max-width: 480px) {
+  .setting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-grid > div {
+    min-width: 0;
+    width: 100%;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  input[type="date"] {
+    width: 100%;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+
+
+.court-grid{
+  position:relative;
+  border:2px solid #d7e8f5;
+  border-radius:18px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#dff1fb 0%, #c9e6f6 100%);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.35);
+}
+
+.court-grid::before{
+  content:"ネット";
+  position:absolute;
+  top:6px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#23364d;
+  color:white;
+  font-size:12px;
+  font-weight:900;
+  padding:3px 10px;
+  border-radius:999px;
+  z-index:3;
+}
+
+.court-grid::after{
+  content:"";
+  position:absolute;
+  top:44px;
+  left:0;
+  width:100%;
+  height:3px;
+  background:white;
+  opacity:0.9;
+}
+
+.court-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+}
+
+.court-row:first-child{
+  border-bottom:2px solid rgba(255,255,255,0.8);
+  padding-top:26px;
+}
+
+.player-cell{
+  aspect-ratio:1.3;
+  border:none;
+  border-right:2px solid rgba(255,255,255,0.65);
+  background:transparent;
+  font-size:24px;
+  font-weight:900;
+  color:#18324b;
+}
+
+.player-cell:last-child{
+  border-right:none;
+}
+
+.setter-cell{
+  background:rgba(255,219,77,0.9);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.9);
+  border-radius:12px;
+}
+
+.score-court-wrap{
+  margin:14px 0;
+}
+
+.score-court-title{
+  text-align:center;
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.mini-court{
+  max-width:280px;
+  margin:0 auto;
+}
+
+.mini-player{
+  font-size:18px;
+}
+</style>
+</head>
+
+<body>
+<div class="offline-badge" id="offlineBadge">オフライン使用中</div>
+<div class="app">
+
+  <div id="listScreen" class="screen active">
+    <div class="header">Volley Score Advance</div>
+
+    <div class="header-sub">
+      <h2>試合一覧</h2>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="text-btn" onclick="openSettingsModal()">⚙ 設定</button>
+        <button class="text-btn" id="editBtn" onclick="toggleEditMode()">編集</button>
+      </div>
+    </div>
+
+    <div class="transfer-actions">
+      <button class="transfer-btn" id="shareSelectModeBtn" onclick="toggleShareSelectMode()">☑ 選択共有</button>
+      <button class="transfer-btn secondary" onclick="openImportFile()">📥 読み込み</button>
+    </div>
+    <div class="selection-actions" id="selectionActions">
+      <div class="selection-count" id="selectionCount">0試合選択中</div>
+      <button class="transfer-btn secondary" onclick="selectAllMatchesForShare()">全選択</button>
+      <button class="transfer-btn secondary" onclick="clearSelectedMatches()">選択解除</button>
+      <button class="transfer-btn selection-export-btn" onclick="exportSelectedMatches()">📤 選択した試合を書き出し</button>
+    </div>
+    <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="importMatchesFromFile(event)" />
+
+    <div id="matchList"></div>
+    <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
+  </div>
+
+  <div id="scoreScreen" class="screen">
+    <div class="header" style="margin:0 -18px;">
+      <div class="header-row">
+        <button class="back-btn" onclick="requestGoList()">← 一覧に戻る</button>
+        <div class="header-title">Score Advance</div>
+        <button class="header-btn" onclick="saveMatch()">💾 保存</button>
+      </div>
+    </div>
+
+    <div class="set-row">
+      <div class="set-title">SET <span id="setNumberLabel">1</span></div>
+      <div class="set-summary" id="setSummary"></div>
+      <button class="set-end-btn" onclick="endSet()">セット終了 → 次のセットへ</button>
+    </div>
+
+    <div class="collapse open" id="matchInfoBox">
+      <div class="collapse-head" onclick="toggleMatchInfo()">
+        <span>試合情報</span>
+        <span id="matchInfoArrow">▲</span>
+      </div>
+
+      <div class="collapse-body">
+        <label>対戦相手</label>
+        <input id="opponentName" placeholder="例：○○高校" oninput="markDirty()" />
+
+        <div class="setting-grid">
+          <div>
+            <label>試合日</label>
+            <input id="matchDate" type="date" oninput="markDirty()" />
+          </div>
+          <div>
+            <label>大会・試合名</label>
+            <input id="matchTitle" placeholder="例：練習試合" oninput="markDirty()" />
+          </div>
+        </div>
+
+        <label style="margin-top:12px;">会場</label>
+        <input id="matchVenue" placeholder="例：○○体育館" oninput="markDirty()" />
+
+        <label style="margin-top:12px;">メモ</label>
+        <textarea id="matchMemo" placeholder="気づき・テーマなど" oninput="markDirty()"></textarea>
+      </div>
+    </div>
+
+    <div class="collapse open" id="rotationInfoBox">
+      <div class="collapse-head" onclick="toggleRotationInfo()">
+        <span>セット設定</span>
+        <span id="rotationInfoArrow">▲</span>
+      </div>
+
+      <div class="collapse-body">
+        <div class="setting-grid">
+          <div>
+            <label>HOME開始ローテ</label>
+            <select id="startHomeRotation" onchange="markDirty(); updateSetterHighlight()">
+              <option value="1">S1</option>
+              <option value="2">S6</option>
+              <option value="3">S5</option>
+              <option value="4">S4</option>
+              <option value="5">S3</option>
+              <option value="6">S2</option>
+              <option value="-">ー</option>
+            </select>
+          </div>
+
+          <div>
+            <label>AWAY開始ローテ</label>
+            <select id="startAwayRotation" onchange="markDirty()">
+              <option value="-">ー</option>
+              <option value="1">S1</option>
+              <option value="2">S6</option>
+              <option value="3">S5</option>
+              <option value="4">S4</option>
+              <option value="5">S3</option>
+              <option value="6">S2</option>
+            </select>
+          </div>
+
+          <div>
+            <label>開始サーバー</label>
+            <select id="startServer" onchange="markDirty()">
+              <option value="home">HOME</option>
+              <option value="away">AWAY</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="start-btn" onclick="startMatch()">このセットを開始 / 設定更新</button>
+      </div>
+    </div>
+
+    
+<div class="collapse open" id="starterMemberBox">
+  <div class="collapse-head">
+    <span>HOMEスタートメンバー</span>
+  </div>
+
+  <div class="collapse-body" style="display:block;">
+    <div style="font-size:13px; font-weight:800; color:#555; margin-bottom:10px;">
+      コートをタッチして背番号を入力（未入力は「ー」）
+    </div>
+
+    <div class="court-grid" id="starterCourt">
+      <div class="court-row">
+        <button class="player-cell" onclick="editPlayerNumber('lf')"><span id="num-lf">ー</span></button>
+        <button class="player-cell setter-cell" onclick="editPlayerNumber('cf')"><span id="num-cf">ー</span></button>
+        <button class="player-cell" onclick="editPlayerNumber('rf')"><span id="num-rf">ー</span></button>
+      </div>
+      <div class="court-row">
+        <button class="player-cell" onclick="editPlayerNumber('lb')"><span id="num-lb">ー</span></button>
+        <button class="player-cell" onclick="editPlayerNumber('cb')"><span id="num-cb">ー</span></button>
+        <button class="player-cell" onclick="editPlayerNumber('rb')"><span id="num-rb">ー</span></button>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; font-size:12px; color:#666; font-weight:700;">
+      黄色＝セッター位置（ローテ判別）
+    </div>
+  </div>
+</div>
+
+
+<div class="score-area">
+      <div>
+        <div class="team-title home-text">HOME</div>
+        <div class="score-box home-bg" id="homeScoreBox">
+          <span id="homeScore">0</span>
+        </div>
+        <div class="rotation-under home-text">
+          <span id="homeRotationLabel">S1</span>
+          <span id="homeServeDot"></span>
+        </div>
+      </div>
+
+      <div class="hyphen">-</div>
+
+      <div>
+        <div class="team-title away-text">AWAY</div>
+        <div class="score-box away-bg" id="awayScoreBox">
+          <span id="awayScore">0</span>
+        </div>
+        <div class="rotation-under away-text">
+          <span id="awayRotationLabel">ー</span>
+          <span id="awayServeDot"></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <span class="serve-label" id="serveLabel">SERVE：ー</span>
+    </div>
+
+    
+<div class="score-court-wrap">
+  <div class="score-court-title">現在のコート配置</div>
+  <div class="court-grid mini-court">
+    <div class="court-row">
+      <button class="player-cell mini-player"><span id="live-lf">ー</span></button>
+      <button class="player-cell setter-cell mini-player"><span id="live-cf">ー</span></button>
+      <button class="player-cell mini-player"><span id="live-rf">ー</span></button>
+    </div>
+    <div class="court-row">
+      <button class="player-cell mini-player"><span id="live-lb">ー</span></button>
+      <button class="player-cell mini-player"><span id="live-cb">ー</span></button>
+      <button class="player-cell mini-player"><span id="live-rb">ー</span></button>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+    <div class="current-rotation">
+      現在のローテ：<span id="currentRotation">ー</span>
+    </div>
+
+    <div class="history-title">
+      <div>得点履歴（最新が上）</div>
+      <div style="text-align:right;">HOME/AWAY</div>
+    </div>
+
+    <div class="history-tabs" id="historyTabs"></div>
+    <div class="history-view-note" id="historyViewNote"></div>
+
+    <div class="history" id="history"></div>
+
+    <div class="fixed-actions">
+      <div class="main-buttons">
+        <button class="point-btn home-bg" onclick="openReasonModal('home')">HOME +1</button>
+        <button class="point-btn away-bg" onclick="openReasonModal('away')">AWAY +1</button>
+      </div>
+
+      <div class="sub-buttons">
+        <button class="sub-btn" onclick="undo()">↩ 1点戻す</button>
+        <button class="sub-btn" onclick="confirmResetMatch()">↻ リセット</button>
+      </div>
+    </div>
+
+    <div class="collapse" id="statsBox">
+      <div class="collapse-head" onclick="toggleStats()">
+        <span>📊 統計データを見る</span>
+        <span id="statsArrow">▼</span>
+      </div>
+
+      <div class="collapse-body">
+        <div class="stats-card">
+          <div class="stats-main-tabs">
+            <button class="stats-main-tab active" id="pointInfoTab" onclick="setStatsMode('point')">
+              点数情報
+            </button>
+            <button class="stats-main-tab" id="sideoutTab" onclick="setStatsMode('sideout')">
+              サイドアウト&ブレイク
+            </button>
+            <button class="stats-main-tab" id="graphTab" onclick="setStatsMode('graph')">
+              流れ分析
+            </button>
+          </div>
+
+          <h3 style="margin:0;" id="statsTitle">SET 1</h3>
+
+          <div class="stats-tabs" id="statsTabs"></div>
+
+          <div id="pointStatsView"></div>
+
+          <div id="sideoutStatsView" style="display:none;">
+            <div class="stats-top">
+              <div class="stats-box">
+                <div class="stats-label">得失点</div>
+                <div class="stats-value" id="totalDiff">0</div>
+                <div class="stats-sub" id="totalPointDetail">(0 - 0)</div>
+              </div>
+
+              <div class="stats-box">
+                <div class="stats-label">SO%</div>
+                <div class="stats-value" id="totalSO">0%</div>
+                <div class="stats-sub" id="totalSODetail">(0/0)</div>
+              </div>
+
+              <div class="stats-box">
+                <div class="stats-label">BK%</div>
+                <div class="stats-value" id="totalBK">0%</div>
+                <div class="stats-sub" id="totalBKDetail">(0/0)</div>
+              </div>
+            </div>
+
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>ローテ</th>
+                  <th>得失点</th>
+                  <th>SO%<br><small>成功/機会</small></th>
+                  <th>BK%<br><small>成功/機会</small></th>
+                </tr>
+              </thead>
+              <tbody id="statsTableBody"></tbody>
+            </table>
+
+            <div class="note">
+              ※SO%：相手サーブ時にHOMEが得点した割合<br>
+              ※BK%：HOMEサーブ時にHOMEが得点した割合<br>
+              ※％は小数なしの切り上げ表示
+            </div>
+          </div>
+
+          <div id="graphStatsView" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-bg" id="reasonModal">
+  <div class="modal">
+    <div class="modal-title" id="reasonModalTitle">得点理由を選択</div>
+    <div class="modal-text" id="reasonModalText">理由を選ぶと得点が入ります</div>
+
+    <div class="reason-section">
+      <div class="reason-section-title" id="scoringReasonTitle">得点理由</div>
+      <div id="scoringReasonButtons"></div>
+    </div>
+
+    <div class="reason-section">
+      <div class="reason-section-title" id="mistakeReasonTitle">失点理由</div>
+      <div id="mistakeReasonButtons"></div>
+    </div>
+
+    <button class="cancel-btn" onclick="closeReasonModal()">キャンセル</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title">この試合を削除しますか？</div>
+    <div class="modal-text" id="deleteModalText"></div>
+    <button class="danger-btn" onclick="confirmDelete()">削除する</button>
+    <button class="cancel-btn" onclick="closeDeleteModal()">キャンセル</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="unsavedModal">
+  <div class="modal">
+    <div class="modal-title">保存していない変更があります</div>
+    <div class="modal-text">一覧に戻る前に保存しますか？</div>
+    <button class="primary-btn" onclick="saveThenGoList()">保存して戻る</button>
+    <button class="danger-btn" onclick="discardAndGoList()">保存せず戻る</button>
+    <button class="cancel-btn" onclick="closeUnsavedModal()">キャンセル</button>
+  </div>
+</div>
+
+<script>
+let matches = JSON.parse(localStorage.getItem("volleyMatchesPlus")) || [];
+let editMode = false;
+let shareSelectMode = false;
+let selectedMatchIds = new Set();
+let deleteTargetId = null;
+let currentMatchId = null;
+let isDirty = false;
+
+let setNumber = 1;
+let setResults = [];
+let statsView = "current";
+let statsMode = "point";
+let historyView = "current";
+
+let homeScore = 0;
+let awayScore = 0;
+let homeRotation = 1;
+let awayRotation = "-";
+let servingTeam = null;
+let history = [];
+let pendingScoreTeam = null;
+
+const rotationMap = {
+  1: "S1",
+  2: "S6",
+  3: "S5",
+  4: "S4",
+  5: "S3",
+  6: "S2",
+  "-": "ー"
+};
+
+const rotationOrder = [1, 2, 3, 4, 5, 6];
+
+const scoringReasons = ["アタック決定", "サービスエース", "ブロック得点"];
+const mistakeReasons = ["アタック失点", "サーブミス", "その他のミス"];
+const allReasons = [...scoringReasons, ...mistakeReasons];
+
+const starterPlayers = {
+  lf:"ー",
+  cf:"ー",
+  rf:"ー",
+  lb:"ー",
+  cb:"ー",
+  rb:"ー"
+};
+
+function editPlayerNumber(pos){
+  const current = starterPlayers[pos] || "ー";
+  const input = prompt("背番号を入力してください（空欄でー）", current === "ー" ? "" : current);
+  if(input === null) return;
+
+  starterPlayers[pos] = input.trim() === "" ? "ー" : input.trim();
+
+  const target = document.getElementById("num-" + pos);
+  if(target) target.textContent = starterPlayers[pos];
+
+  updateLiveCourt();
+  updateSetterHighlight();
+  markDirty();
+}
+
+
+function updateSetterHighlight(){
+  const rotation = document.getElementById("startHomeRotation")?.value || "1";
+
+  const map = {
+    "1":"rb",
+    "2":"cf",
+    "3":"lb",
+    "4":"lf",
+    "5":"cb",
+    "6":"rf"
+  };
+
+  document.querySelectorAll('.player-cell').forEach(el=>{
+    el.classList.remove('setter-cell');
+  });
+
+  const target = map[rotation];
+  if(!target) return;
+
+  const ids = [
+    "num-"+target,
+    "live-"+target
+  ];
+
+  ids.forEach(id=>{
+    const span = document.getElementById(id);
+    if(span && span.parentElement){
+      span.parentElement.classList.add('setter-cell');
+    }
+  });
+}
+
+
+function updateLiveCourt(){
+  Object.keys(starterPlayers).forEach(pos => {
+    const live = document.getElementById("live-" + pos);
+    if(live){
+      live.textContent = starterPlayers[pos];
+    }
+  });
+}
+
+
+
+function markDirty() {
+  isDirty = true;
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function toggleMatchInfo() {
+  const box = document.getElementById("matchInfoBox");
+  box.classList.toggle("open");
+  document.getElementById("matchInfoArrow").textContent =
+    box.classList.contains("open") ? "▲" : "▼";
+}
+
+function openMatchInfo() {
+  document.getElementById("matchInfoBox").classList.add("open");
+  document.getElementById("matchInfoArrow").textContent = "▲";
+}
+
+function closeMatchInfo() {
+  document.getElementById("matchInfoBox").classList.remove("open");
+  document.getElementById("matchInfoArrow").textContent = "▼";
+}
+
+function toggleRotationInfo() {
+  const box = document.getElementById("rotationInfoBox");
+  box.classList.toggle("open");
+  document.getElementById("rotationInfoArrow").textContent =
+    box.classList.contains("open") ? "▲" : "▼";
+}
+
+function openRotationInfo() {
+  document.getElementById("rotationInfoBox").classList.add("open");
+  document.getElementById("rotationInfoArrow").textContent = "▲";
+}
+
+function closeRotationInfo() {
+  document.getElementById("rotationInfoBox").classList.remove("open");
+  document.getElementById("rotationInfoArrow").textContent = "▼";
+}
+
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatMatchDate(dateString) {
+  if (!dateString) return new Date().toLocaleDateString("ja-JP");
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+  return `${Number(parts[0])}/${Number(parts[1])}/${Number(parts[2])}`;
+}
+
+function toggleStats() {
+  const box = document.getElementById("statsBox");
+  box.classList.toggle("open");
+  document.getElementById("statsArrow").textContent =
+    box.classList.contains("open") ? "▲" : "▼";
+}
+
+function setStatsView(view) {
+  statsView = view;
+  renderStats();
+}
+
+function setStatsMode(mode) {
+  statsMode = mode;
+
+  const pointTab = document.getElementById("pointInfoTab");
+  const sideoutTab = document.getElementById("sideoutTab");
+  const graphTab = document.getElementById("graphTab");
+  const pointView = document.getElementById("pointStatsView");
+  const sideoutView = document.getElementById("sideoutStatsView");
+  const graphView = document.getElementById("graphStatsView");
+
+  if (!pointTab || !sideoutTab || !graphTab || !pointView || !sideoutView || !graphView) return;
+
+  pointTab.classList.toggle("active", mode === "point");
+  sideoutTab.classList.toggle("active", mode === "sideout");
+  graphTab.classList.toggle("active", mode === "graph");
+
+  pointView.style.display = mode === "point" ? "block" : "none";
+  sideoutView.style.display = mode === "sideout" ? "block" : "none";
+  graphView.style.display = mode === "graph" ? "block" : "none";
+}
+
+function openReasonModal(team) {
+  if (!servingTeam) {
+    alert("先に試合開始を押してください");
+    return;
+  }
+
+  pendingScoreTeam = team;
+
+  const scoringTeamName = team === "home" ? "HOME" : "AWAY";
+  const opponentTeamName = team === "home" ? "AWAY" : "HOME";
+  const isScoringTeamServing = team === servingTeam;
+
+  document.getElementById("reasonModalTitle").textContent = `${scoringTeamName} +1 の理由を選択`;
+  document.getElementById("reasonModalText").textContent = `${scoringTeamName}に1点が入ります`;
+  document.getElementById("scoringReasonTitle").textContent = `${scoringTeamName}の得点理由`;
+  document.getElementById("mistakeReasonTitle").textContent = `${opponentTeamName}の失点理由`;
+
+  const scoringButtons = document.getElementById("scoringReasonButtons");
+  const mistakeButtons = document.getElementById("mistakeReasonButtons");
+
+  scoringButtons.innerHTML = "";
+  mistakeButtons.innerHTML = "";
+
+  const visibleScoringReasons = scoringReasons.filter(reason => {
+    if (!isScoringTeamServing && reason === "サービスエース") return false;
+    return true;
+  });
+
+  const visibleMistakeReasons = mistakeReasons.filter(reason => {
+    if (isScoringTeamServing && reason === "サーブミス") return false;
+    return true;
+  });
+
+  visibleScoringReasons.forEach(reason => {
+    const btn = document.createElement("button");
+    btn.className = team === "home" ? "reason-option" : "reason-option away";
+    btn.textContent = reason;
+    btn.onclick = () => selectReason(reason);
+    scoringButtons.appendChild(btn);
+  });
+
+  visibleMistakeReasons.forEach(reason => {
+    const btn = document.createElement("button");
+    btn.className = team === "home" ? "reason-option away" : "reason-option";
+    btn.textContent = reason;
+    btn.onclick = () => selectReason(reason);
+    mistakeButtons.appendChild(btn);
+  });
+
+  document.getElementById("reasonModal").style.display = "flex";
+}
+
+function closeReasonModal() {
+  pendingScoreTeam = null;
+  document.getElementById("reasonModal").style.display = "none";
+}
+
+function selectReason(reason) {
+  if (!pendingScoreTeam) return;
+  addPoint(pendingScoreTeam, reason);
+  closeReasonModal();
+}
+
+function newMatch() {
+  currentMatchId = null;
+  isDirty = false;
+  setNumber = 1;
+  setResults = [];
+  statsView = "current";
+  statsMode = "point";
+  historyView = "current";
+  history = [];
+
+  document.getElementById("opponentName").value = "";
+  document.getElementById("matchDate").value = getTodayDateString();
+  document.getElementById("matchTitle").value = "";
+  document.getElementById("matchVenue").value = "";
+  document.getElementById("matchMemo").value = "";
+  document.getElementById("startHomeRotation").value = "1";
+  document.getElementById("startAwayRotation").value = "-";
+  document.getElementById("startServer").value = "home";
+
+  resetCurrentMatch(false);
+  openMatchInfo();
+  openRotationInfo();
+  showScreen("scoreScreen");
+  setStatsMode("point");
+}
+
+function requestGoList() {
+  if (isDirty) {
+    document.getElementById("unsavedModal").style.display = "flex";
+  } else {
+    goList();
+  }
+}
+
+function goList() {
+  renderMatchList();
+  showScreen("listScreen");
+}
+
+function saveThenGoList() {
+  closeUnsavedModal();
+  saveMatch(true);
+}
+
+function discardAndGoList() {
+  closeUnsavedModal();
+  isDirty = false;
+  goList();
+}
+
+function closeUnsavedModal() {
+  document.getElementById("unsavedModal").style.display = "none";
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  if (editMode && shareSelectMode) {
+    shareSelectMode = false;
+    selectedMatchIds.clear();
+  }
+  document.getElementById("editBtn").textContent = editMode ? "完了" : "編集";
+  updateShareSelectionUI();
+  renderMatchList();
+}
+
+function startMatch() {
+  homeScore = 0;
+  awayScore = 0;
+
+  const homeStart = document.getElementById("startHomeRotation").value;
+  const awayStart = document.getElementById("startAwayRotation").value;
+
+  homeRotation = homeStart === "-" ? "-" : Number(homeStart);
+  awayRotation = awayStart === "-" ? "-" : Number(awayStart);
+  servingTeam = document.getElementById("startServer").value;
+
+  history = history.filter(item => item.setNumber !== setNumber);
+
+  statsView = "current";
+  historyView = "current";
+  markDirty();
+  closeRotationInfo();
+  updateLiveCourt();
+  updateSetterHighlight();
+  updateDisplay();
+}
+
+function addPoint(team, reason = "未選択") {
+  if (!servingTeam) {
+    alert("先に試合開始を押してください");
+    return;
+  }
+
+  const beforeServer = servingTeam;
+  const beforeHomeRotation = homeRotation;
+  const beforeAwayRotation = awayRotation;
+
+  if (team === "home") {
+    homeScore++;
+    if (servingTeam === "away") {
+      advanceHomeRotation();
+      servingTeam = "home";
+    }
+  } else {
+    awayScore++;
+    if (servingTeam === "home") {
+      advanceAwayRotation();
+      servingTeam = "away";
+    }
+  }
+
+  history.push({
+    setNumber,
+    scoredTeam: team,
+    reason,
+    homeScore,
+    awayScore,
+    homeRotation,
+    awayRotation,
+    server: servingTeam,
+    beforeServer,
+    beforeHomeRotation,
+    beforeAwayRotation
+  });
+
+  historyView = "current";
+  markDirty();
+  updateDisplay();
+}
+
+function advanceHomeRotation() {
+  if (homeRotation === "-") return;
+  homeRotation++;
+  if (homeRotation > 6) homeRotation = 1;
+}
+
+function advanceAwayRotation() {
+  if (awayRotation === "-") return;
+  awayRotation++;
+  if (awayRotation > 6) awayRotation = 1;
+}
+
+function undo() {
+  const currentSetHistory = history.filter(item => item.setNumber === setNumber);
+
+  if (
+    setNumber > 1 &&
+    homeScore === 0 &&
+    awayScore === 0 &&
+    currentSetHistory.length === 0
+  ) {
+    const prevSetNumber = setNumber - 1;
+    const prevResult = setResults.find(s => s.setNumber === prevSetNumber);
+
+    if (prevResult) {
+      const ok = confirm(
+        `前のセットに戻しますか？\nSET${prevSetNumber} ${prevResult.homeScore}-${prevResult.awayScore} に戻ります。`
+      );
+
+      if (ok) {
+        setNumber = prevSetNumber;
+        homeScore = prevResult.homeScore;
+        awayScore = prevResult.awayScore;
+
+        setResults = setResults.filter(s => s.setNumber !== prevSetNumber);
+
+        const prevHistory = history.filter(item => item.setNumber === prevSetNumber);
+
+        if (prevHistory.length > 0) {
+          const last = prevHistory[prevHistory.length - 1];
+          homeRotation = last.homeRotation;
+          awayRotation = last.awayRotation;
+          servingTeam = last.server;
+        }
+
+        statsView = "current";
+        markDirty();
+        updateDisplay();
+      }
+    }
+
+    return;
+  }
+
+  if (currentSetHistory.length === 0) return;
+
+  let lastIndex = -1;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].setNumber === setNumber) {
+      lastIndex = i;
+      break;
+    }
+  }
+
+  if (lastIndex >= 0) history.splice(lastIndex, 1);
+
+  const oldHistory = history.filter(item => item.setNumber === setNumber);
+  const otherHistory = history.filter(item => item.setNumber !== setNumber);
+
+  const homeStart = document.getElementById("startHomeRotation").value;
+  const awayStart = document.getElementById("startAwayRotation").value;
+
+  homeScore = 0;
+  awayScore = 0;
+  homeRotation = homeStart === "-" ? "-" : Number(homeStart);
+  awayRotation = awayStart === "-" ? "-" : Number(awayStart);
+  servingTeam = document.getElementById("startServer").value;
+
+  history = [...otherHistory];
+
+  oldHistory.forEach(item => addPoint(item.scoredTeam, item.reason));
+
+  markDirty();
+  updateDisplay();
+}
+
+function confirmResetMatch() {
+  const ok = confirm(
+    `SET${setNumber} をリセットしますか？\n\n現在スコア：${homeScore}-${awayScore}\n\nこのセットの得点履歴は消えます。`
+  );
+
+  if (!ok) return;
+
+  resetCurrentMatch();
+}
+
+function resetCurrentMatch(dirty = true) {
+  homeScore = 0;
+  awayScore = 0;
+  homeRotation = 1;
+  awayRotation = "-";
+  servingTeam = null;
+  history = history.filter(item => item.setNumber !== setNumber);
+
+  if (dirty) markDirty();
+  updateDisplay();
+}
+
+function endSet() {
+  if (!servingTeam && homeScore === 0 && awayScore === 0) {
+    alert("まだセットが開始されていません");
+    return;
+  }
+
+  const result = {
+    setNumber,
+    homeScore,
+    awayScore,
+    winner: homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "draw"
+  };
+
+  const confirmText = setNumber >= 5
+    ? `SET${setNumber}を ${homeScore}-${awayScore} で保存しますか？`
+    : `SET${setNumber}を ${homeScore}-${awayScore} で保存し、次のセットへ進みますか？`;
+
+  const ok = confirm(confirmText);
+  if (!ok) return;
+
+  const existingIndex = setResults.findIndex(s => s.setNumber === setNumber);
+  if (existingIndex >= 0) {
+    setResults[existingIndex] = result;
+  } else {
+    setResults.push(result);
+  }
+
+  if (setNumber >= 5) {
+    markDirty();
+    updateDisplay();
+    alert("SET5まで記録しました。この試合は終了です。保存してください。");
+    return;
+  }
+
+  const previousStartServer = document.getElementById("startServer").value;
+  const nextStartServer = previousStartServer === "home" ? "away" : "home";
+
+  setNumber++;
+  homeScore = 0;
+  awayScore = 0;
+  servingTeam = null;
+  statsView = "current";
+  historyView = "current";
+
+  document.getElementById("startServer").value = nextStartServer;
+
+  const homeStart = document.getElementById("startHomeRotation").value;
+  const awayStart = document.getElementById("startAwayRotation").value;
+
+  homeRotation = homeStart === "-" ? "-" : Number(homeStart);
+  awayRotation = awayStart === "-" ? "-" : Number(awayStart);
+
+  closeMatchInfo();
+  openRotationInfo();
+  markDirty();
+  updateDisplay();
+}
+
+function updateDisplay() {
+  const homeRotationText = rotationMap[homeRotation];
+  const awayRotationText = rotationMap[awayRotation];
+
+  document.getElementById("setNumberLabel").textContent = setNumber;
+  document.getElementById("homeScore").textContent = homeScore;
+  document.getElementById("awayScore").textContent = awayScore;
+  document.getElementById("homeRotationLabel").textContent = homeRotationText;
+  document.getElementById("awayRotationLabel").textContent = awayRotationText;
+
+  const homeBox = document.getElementById("homeScoreBox");
+  const awayBox = document.getElementById("awayScoreBox");
+
+  homeBox.className = "score-box home-bg";
+  awayBox.className = "score-box away-bg";
+
+  document.getElementById("homeServeDot").className = "";
+  document.getElementById("awayServeDot").className = "";
+  document.getElementById("homeServeDot").style.background = "";
+  document.getElementById("awayServeDot").style.background = "";
+
+  if (servingTeam === "home") {
+    homeBox.classList.add("serving");
+    document.getElementById("homeServeDot").className = "serve-dot";
+    document.getElementById("homeServeDot").style.background = "#1557e6";
+    document.getElementById("serveLabel").textContent = "SERVE：HOME";
+  } else if (servingTeam === "away") {
+    awayBox.classList.add("serving", "away-serving");
+    document.getElementById("awayServeDot").className = "serve-dot";
+    document.getElementById("awayServeDot").style.background = "#e91f26";
+    document.getElementById("serveLabel").textContent = "SERVE：AWAY";
+  } else {
+    document.getElementById("serveLabel").textContent = "SERVE：ー";
+  }
+
+  const currentRotationEl = document.getElementById("currentRotation");
+
+  if (servingTeam === "home") {
+    currentRotationEl.textContent = `${homeRotationText}（HOME）`;
+    currentRotationEl.className = "home-text";
+  } else if (servingTeam === "away") {
+    currentRotationEl.textContent = `${awayRotationText}（AWAY）`;
+    currentRotationEl.className = "away-text";
+  } else {
+    currentRotationEl.textContent = "ー";
+    currentRotationEl.className = "";
+  }
+
+  renderSetSummary();
+  renderHistoryTabs();
+  renderHistory();
+  renderStats();
+}
+
+function renderSetSummary() {
+  const div = document.getElementById("setSummary");
+  div.innerHTML = "";
+
+  setResults
+    .sort((a,b) => a.setNumber - b.setNumber)
+    .forEach(s => {
+      const pill = document.createElement("span");
+      pill.className = "set-pill";
+      pill.innerHTML = `SET${s.setNumber} <span class="${s.winner === "home" ? "home-text" : s.winner === "away" ? "away-text" : "gray-text"}">${s.homeScore}-${s.awayScore}</span>`;
+      div.appendChild(pill);
+    });
+}
+
+function setHistoryView(view) {
+  historyView = view;
+  renderHistoryTabs();
+  renderHistory();
+}
+
+function getHistoryTargetSetNumber() {
+  return historyView === "current" ? setNumber : Number(historyView);
+}
+
+function renderHistoryTabs() {
+  const tabs = document.getElementById("historyTabs");
+  const note = document.getElementById("historyViewNote");
+  if (!tabs || !note) return;
+
+  tabs.innerHTML = "";
+
+  getAvailableSetNumbers().forEach(num => {
+    const btn = document.createElement("button");
+    const active = getHistoryTargetSetNumber() === num;
+    btn.className = `history-tab ${active ? "active" : ""}`;
+    btn.textContent = `SET${num}`;
+    btn.onclick = () => setHistoryView(num);
+    tabs.appendChild(btn);
+  });
+
+  const target = getHistoryTargetSetNumber();
+  note.textContent = target === setNumber
+    ? `現在入力中のSET${setNumber}を表示中`
+    : `SET${target}を見返し中（得点入力はSET${setNumber}に入ります）`;
+}
+
+function renderHistory() {
+  const historyDiv = document.getElementById("history");
+  historyDiv.innerHTML = "";
+
+  const targetSetNumber = getHistoryTargetSetNumber();
+  const setHistoryItems = history.filter(item => item.setNumber === targetSetNumber);
+
+  if (setHistoryItems.length === 0) {
+    historyDiv.innerHTML = `
+      <div class="history-row">
+        <div class="badge" style="background:#999;">START</div>
+        <div class="score-history">
+          <span class="gray-text">0</span>
+          <span>-</span>
+          <span class="gray-text">0</span>
+          <div class="reason-text gray-text">セット開始</div>
+        </div>
+        <div class="history-rotation">
+          <span class="gray-text">ー</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  setHistoryItems
+    .slice()
+    .reverse()
+    .forEach(item => {
+      const row = document.createElement("div");
+      row.className = "history-row";
+
+      const badgeClass = item.scoredTeam === "home" ? "home-bg" : "away-bg";
+      const badgeText = item.scoredTeam === "home" ? "HOME" : "AWAY";
+
+      const homeRot = rotationMap[item.homeRotation];
+      const awayRot = rotationMap[item.awayRotation];
+
+      const homeScoreClass = item.scoredTeam === "home" ? "home-text" : "gray-text";
+      const awayScoreClass = item.scoredTeam === "away" ? "away-text" : "gray-text";
+      const isScoringReason = scoringReasons.includes(item.reason);
+
+      let reasonClass = "gray-text";
+      if (isScoringReason) {
+        reasonClass = item.scoredTeam === "home" ? "home-text" : "away-text";
+      } else if (mistakeReasons.includes(item.reason)) {
+        reasonClass = item.scoredTeam === "home" ? "away-text" : "home-text";
+      }
+
+      row.innerHTML = `
+        <div class="badge ${badgeClass}">${badgeText}</div>
+        <div class="score-history">
+          <span class="${homeScoreClass}">${item.homeScore}</span>
+          <span>-</span>
+          <span class="${awayScoreClass}">${item.awayScore}</span>
+          <div class="reason-text ${reasonClass}">${item.reason || ""}</div>
+        </div>
+        <div class="history-rotation">
+          <span class="home-text">${homeRot}</span>/<span class="away-text">${awayRot}</span>
+        </div>
+      `;
+
+      historyDiv.appendChild(row);
+    });
+
+  const first = setHistoryItems[0];
+  const startHomeRot = rotationMap[first.beforeHomeRotation] || "ー";
+  const startAwayRot = rotationMap[first.beforeAwayRotation] || "ー";
+  const startRow = document.createElement("div");
+  startRow.className = "history-row";
+  startRow.innerHTML = `
+    <div class="badge" style="background:#999;">START</div>
+    <div class="score-history">
+      <span class="gray-text">0</span>
+      <span>-</span>
+      <span class="gray-text">0</span>
+      <div class="reason-text gray-text">セット開始</div>
+    </div>
+    <div class="history-rotation">
+      <span class="home-text">${startHomeRot}</span>/<span class="away-text">${startAwayRot}</span>
+    </div>
+  `;
+  historyDiv.appendChild(startRow);
+}
+
+function getAvailableSetNumbers() {
+  const setNums = new Set();
+
+  history.forEach(item => setNums.add(item.setNumber));
+  setResults.forEach(item => setNums.add(item.setNumber));
+  setNums.add(setNumber);
+
+  return Array.from(setNums).sort((a,b) => a - b);
+}
+
+function renderStatsTabs() {
+  const tabs = document.getElementById("statsTabs");
+  tabs.innerHTML = "";
+
+  const totalBtn = document.createElement("button");
+  totalBtn.className = `stats-tab ${statsView === "total" ? "active" : ""}`;
+  totalBtn.textContent = "TOTAL";
+  totalBtn.onclick = () => setStatsView("total");
+  tabs.appendChild(totalBtn);
+
+  getAvailableSetNumbers().forEach(num => {
+    const btn = document.createElement("button");
+    const active = statsView === "current"
+      ? num === setNumber
+      : statsView === num;
+
+    btn.className = `stats-tab ${active ? "active" : ""}`;
+    btn.textContent = `SET${num}`;
+    btn.onclick = () => setStatsView(num);
+    tabs.appendChild(btn);
+  });
+}
+
+function getStatsItems() {
+  if (statsView === "total") return history;
+  if (statsView === "current") return history.filter(item => item.setNumber === setNumber);
+  return history.filter(item => item.setNumber === statsView);
+}
+
+function getStatsTitle() {
+  if (statsView === "total") return "TOTAL";
+  if (statsView === "current") return `SET ${setNumber}`;
+  return `SET ${statsView}`;
+}
+
+function renderStats() {
+  renderStatsTabs();
+  document.getElementById("statsTitle").textContent = getStatsTitle();
+
+  renderPointStats();
+  renderSideoutStats();
+  renderFlowAnalysis();
+}
+
+
+function renderFlowAnalysis() {
+  const items = getStatsItems();
+  const div = document.getElementById("graphStatsView");
+  if (!div) return;
+
+  if (items.length === 0) {
+    div.innerHTML = `
+      <div class="flow-card">
+        <div class="flow-empty">まだ流れ分析に表示する得点履歴がありません</div>
+      </div>
+    `;
+    return;
+  }
+
+  const analysis = calculateFlowAnalysis(items);
+  const homeRun = analysis.maxRuns.home;
+  const awayRun = analysis.maxRuns.away;
+  const homeLead = analysis.maxLeads.home;
+  const awayLead = analysis.maxLeads.away;
+  const biggestRunTeam = homeRun.length >= awayRun.length ? "home" : "away";
+  const biggestRunText = biggestRunTeam === "home" ? "HOME" : "AWAY";
+  const biggestRunClass = biggestRunTeam === "home" ? "home-text" : "away-text";
+
+  const pointRows = analysis.keyPoints.length > 0
+    ? analysis.keyPoints.map(point => `
+        <div class="flow-point-row">
+          <div class="flow-point-tag ${point.team}">${point.label}</div>
+          <div class="flow-point-text">
+            ${point.text}
+            <br><span class="flow-point-score">${point.range}</span>
+          </div>
+        </div>
+      `).join("")
+    : `
+        <div class="flow-point-row">
+          <div class="flow-point-tag">確認</div>
+          <div class="flow-point-text">
+            まだ大きな勝負所はありません
+            <br><span class="flow-point-score">得点が進むと自動表示されます</span>
+          </div>
+        </div>
+      `;
+
+  div.innerHTML = `
+    <div class="flow-card">
+      <div class="flow-card-title"><span class="flow-card-icon">🔥</span>最大連続得点</div>
+      <div class="flow-two-col">
+        <div class="flow-box home">
+          <div class="flow-team home-text">HOME</div>
+          <div class="flow-big home-text">${homeRun.length}<span class="flow-unit">連続</span></div>
+          <div class="flow-range">${homeRun.range || "ー"}</div>
+        </div>
+        <div class="flow-box away">
+          <div class="flow-team away-text">AWAY</div>
+          <div class="flow-big away-text">${awayRun.length}<span class="flow-unit">連続</span></div>
+          <div class="flow-range">${awayRun.range || "ー"}</div>
+        </div>
+      </div>
+      <div class="flow-lead-center">
+        <div class="flow-lead-label">最大RUN</div>
+        <div class="flow-lead-value ${biggestRunClass}">${biggestRunText} ${Math.max(homeRun.length, awayRun.length)}連続</div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-title"><span class="flow-card-icon">📊</span>リードの最大差</div>
+      <div class="flow-two-col">
+        <div class="flow-box home">
+          <div class="flow-team home-text">HOME最大リード</div>
+          <div class="flow-big home-text">+${homeLead.value}<span class="flow-unit">点</span></div>
+          <div class="flow-range">${homeLead.score || "ー"}</div>
+        </div>
+        <div class="flow-box away">
+          <div class="flow-team away-text">AWAY最大リード</div>
+          <div class="flow-big away-text">+${awayLead.value}<span class="flow-unit">点</span></div>
+          <div class="flow-range">${awayLead.score || "ー"}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-title"><span class="flow-card-icon">⭐</span>勝負のポイント</div>
+      <div class="flow-point-list">
+        ${pointRows}
+      </div>
+    </div>
+
+    <div class="note">
+      ※流れ分析は得点履歴をもとに、連続得点・点差・終盤局面から自動抽出しています。<br>
+      ※勝負のポイントは「逆転」「20点以降の連続得点」「セット最終局面」を優先して表示します。
+    </div>
+  `;
+}
+
+function calculateFlowAnalysis(items) {
+  const states = [{ home: 0, away: 0, diff: 0, scoredTeam: null, reason: "", index: 0 }];
+  items.forEach((item, index) => {
+    states.push({
+      home: item.homeScore,
+      away: item.awayScore,
+      diff: item.homeScore - item.awayScore,
+      scoredTeam: item.scoredTeam,
+      reason: item.reason || "",
+      index: index + 1
+    });
+  });
+
+  const runs = buildRuns(states);
+  const maxHomeRun = getMaxRun(runs, "home");
+  const maxAwayRun = getMaxRun(runs, "away");
+  const maxLeads = getMaxLeads(states);
+  const keyPoints = buildKeyPoints(states, runs);
+
+  return {
+    maxRuns: {
+      home: maxHomeRun,
+      away: maxAwayRun
+    },
+    maxLeads,
+    keyPoints
+  };
+}
+
+function buildRuns(states) {
+  const runs = [];
+  let current = null;
+
+  for (let i = 1; i < states.length; i++) {
+    const team = states[i].scoredTeam;
+    if (!team) continue;
+
+    if (!current || current.team !== team) {
+      if (current) runs.push(current);
+      current = {
+        team,
+        startIndex: i,
+        endIndex: i,
+        length: 1,
+        startScore: scoreText(states[i - 1]),
+        endScore: scoreText(states[i]),
+        startDiff: states[i - 1].diff,
+        endDiff: states[i].diff,
+        lastReason: states[i].reason || ""
+      };
+    } else {
+      current.endIndex = i;
+      current.length++;
+      current.endScore = scoreText(states[i]);
+      current.endDiff = states[i].diff;
+      current.lastReason = states[i].reason || current.lastReason;
+    }
+  }
+
+  if (current) runs.push(current);
+  return runs.map(run => ({
+    ...run,
+    range: `${run.startScore} → ${run.endScore}`
+  }));
+}
+
+function getMaxRun(runs, team) {
+  const teamRuns = runs.filter(run => run.team === team);
+  if (teamRuns.length === 0) {
+    return { team, length: 0, range: "ー", startScore: "ー", endScore: "ー" };
+  }
+
+  return teamRuns.reduce((best, run) => {
+    if (run.length > best.length) return run;
+    if (run.length === best.length && run.endIndex > best.endIndex) return run;
+    return best;
+  }, teamRuns[0]);
+}
+
+function getMaxLeads(states) {
+  let home = { value: 0, score: "0-0" };
+  let away = { value: 0, score: "0-0" };
+
+  states.forEach(state => {
+    if (state.diff > home.value) {
+      home = { value: state.diff, score: scoreText(state) };
+    }
+    if (-state.diff > away.value) {
+      away = { value: -state.diff, score: scoreText(state) };
+    }
+  });
+
+  return { home, away };
+}
+
+function buildKeyPoints(states, runs) {
+  const points = [];
+
+  const comeback = runs
+    .filter(run => {
+      if (run.team === "home") return run.startDiff <= 0 && run.endDiff > 0 && run.length >= 2;
+      return run.startDiff >= 0 && run.endDiff < 0 && run.length >= 2;
+    })
+    .sort((a, b) => b.length - a.length || b.endIndex - a.endIndex)[0];
+
+  if (comeback) {
+    points.push({
+      label: "逆転",
+      team: comeback.team,
+      text: `${teamLabel(comeback.team)}が${comeback.length}連続得点で逆転`,
+      range: comeback.range
+    });
+  }
+
+  const lateRun = runs
+    .filter(run => {
+      const startTotal = scoreTotal(run.startScore);
+      const endTotal = scoreTotal(run.endScore);
+      return run.length >= 2 && (startTotal >= 38 || endTotal >= 40 || scoreMax(run.startScore) >= 20 || scoreMax(run.endScore) >= 20);
+    })
+    .sort((a, b) => b.endIndex - a.endIndex)[0];
+
+  if (lateRun && !points.some(p => p.range === lateRun.range)) {
+    points.push({
+      label: "終盤RUN",
+      team: lateRun.team,
+      text: `${teamLabel(lateRun.team)}が終盤に${lateRun.length}連続得点`,
+      range: lateRun.range
+    });
+  }
+
+  const last = states[states.length - 1];
+  if (last && last.index > 0) {
+    const lastTeam = last.scoredTeam;
+    const reasonText = last.reason ? `（${last.reason}）` : "";
+    const lastLabel = Math.max(last.home, last.away) >= 24 ? "最終局面" : "直近";
+    const prev = states[states.length - 2] || { home: 0, away: 0 };
+    const lastRange = `${scoreText(prev)} → ${scoreText(last)}`;
+
+    if (!points.some(p => p.range === lastRange)) {
+      points.push({
+        label: lastLabel,
+        team: lastTeam,
+        text: `${teamLabel(lastTeam)}の得点${reasonText}`,
+        range: lastRange
+      });
+    }
+  }
+
+  return points.slice(0, 3);
+}
+
+function scoreText(state) {
+  if (typeof state === "string") return state;
+  return `${state.home}-${state.away}`;
+}
+
+function scoreParts(score) {
+  const parts = String(score).split("-").map(Number);
+  return { home: parts[0] || 0, away: parts[1] || 0 };
+}
+
+function scoreTotal(score) {
+  const parts = scoreParts(score);
+  return parts.home + parts.away;
+}
+
+function scoreMax(score) {
+  const parts = scoreParts(score);
+  return Math.max(parts.home, parts.away);
+}
+
+function teamLabel(team) {
+  return team === "home" ? "HOME" : "AWAY";
+}
+
+
+function renderPointStats() {
+  const items = getStatsItems();
+  const stats = calculatePointStats(items);
+  const div = document.getElementById("pointStatsView");
+  const isTotal = statsView === "total";
+
+  let html = `
+    <div class="point-table">
+      <div class="point-head">
+        <div class="home-text">HOME</div>
+        <div>項目</div>
+        <div class="away-text">AWAY</div>
+      </div>
+      <div class="point-section-title">得点理由</div>
+  `;
+
+  scoringReasons.forEach(reason => {
+    html += pointRowHtml(reason, stats.home[reason], stats.away[reason], isTotal);
+  });
+
+  html += `<div class="point-section-title mistake">失点理由</div>`;
+
+  mistakeReasons.forEach(reason => {
+    html += pointRowHtml(reason, stats.home[reason], stats.away[reason], isTotal);
+  });
+
+  html += `
+    </div>
+    <div class="note">
+      ${isTotal
+        ? "※TOTALは実数合計を大きく表示し、割合を（）内に表示しています。"
+        : "※左がHOME、右がAWAYの実数です。"}
+    </div>
+  `;
+
+  div.innerHTML = html;
+}
+
+function pointRowHtml(label, homeValue, awayValue, isTotal) {
+  const total = homeValue + awayValue;
+  const homePercent = total ? Math.round((homeValue / total) * 100) : 0;
+  const awayPercent = total ? 100 - homePercent : 0;
+
+  const homeClass = homeValue > awayValue ? "home-text" : "gray-text";
+  const awayClass = awayValue > homeValue ? "away-text" : "gray-text";
+
+  if (!isTotal) {
+    return `
+      <div class="point-row">
+        <div class="point-num ${homeClass}">${homeValue}</div>
+        <div class="point-label">${label}</div>
+        <div class="point-num ${awayClass}">${awayValue}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="point-row">
+      <div class="point-num ${homeClass}">
+        ${homeValue}
+        <span class="point-percent">(${homePercent}%)</span>
+      </div>
+      <div>
+        <div class="point-label">${label}</div>
+        <div class="compare-bar-wrap">
+          <div class="compare-blue" style="width:${homePercent}%"></div>
+          <div class="compare-red" style="width:${awayPercent}%"></div>
+        </div>
+      </div>
+      <div class="point-num ${awayClass}">
+        ${awayValue}
+        <span class="point-percent">(${awayPercent}%)</span>
+      </div>
+    </div>
+  `;
+}
+
+function calculatePointStats(items) {
+  const home = {};
+  const away = {};
+
+  allReasons.forEach(reason => {
+    home[reason] = 0;
+    away[reason] = 0;
+  });
+
+  items.forEach(item => {
+    const reason = item.reason;
+    if (!allReasons.includes(reason)) return;
+
+    if (scoringReasons.includes(reason)) {
+      if (item.scoredTeam === "home") home[reason]++;
+      else away[reason]++;
+    }
+
+    if (mistakeReasons.includes(reason)) {
+      if (item.scoredTeam === "home") away[reason]++;
+      else home[reason]++;
+    }
+  });
+
+  return { home, away };
+}
+
+function renderSideoutStats() {
+  const items = getStatsItems();
+  const stats = calculateStats(items);
+
+  document.getElementById("totalDiff").textContent = formatDiff(stats.total.diff);
+  document.getElementById("totalDiff").className = `stats-value ${diffClass(stats.total.diff)}`;
+  document.getElementById("totalPointDetail").textContent = `(${stats.total.pointsFor} - ${stats.total.pointsAgainst})`;
+
+  const soRate = ceilPercent(stats.total.soSuccess, stats.total.soChance);
+  const bkRate = ceilPercent(stats.total.bkSuccess, stats.total.bkChance);
+
+  document.getElementById("totalSO").textContent = `${soRate}%`;
+  document.getElementById("totalSO").className = `stats-value ${rateClass(soRate, "so")}`;
+  document.getElementById("totalSODetail").textContent = `(${stats.total.soSuccess}/${stats.total.soChance})`;
+
+  document.getElementById("totalBK").textContent = `${bkRate}%`;
+  document.getElementById("totalBK").className = `stats-value ${rateClass(bkRate, "bk")}`;
+  document.getElementById("totalBKDetail").textContent = `(${stats.total.bkSuccess}/${stats.total.bkChance})`;
+
+  const tbody = document.getElementById("statsTableBody");
+  tbody.innerHTML = "";
+
+  const bestRotation = getBestRotation(stats.byRotation);
+
+  rotationOrder.forEach(rot => {
+    const s = stats.byRotation[rot];
+    const so = ceilPercent(s.soSuccess, s.soChance);
+    const bk = ceilPercent(s.bkSuccess, s.bkChance);
+
+    const tr = document.createElement("tr");
+    if (rot === bestRotation) tr.classList.add("best");
+
+    tr.innerHTML = `
+      <td>${rot === bestRotation ? "⭐ " : ""}${rotationMap[rot]}</td>
+      <td class="${diffClass(s.diff)}">${formatDiff(s.diff)}</td>
+      <td>
+        <div class="percent-main ${rateClass(so, "so")}">${so}%</div>
+        <div class="percent-sub">(${s.soSuccess}/${s.soChance})</div>
+      </td>
+      <td>
+        <div class="percent-main ${rateClass(bk, "bk")}">${bk}%</div>
+        <div class="percent-sub">(${s.bkSuccess}/${s.bkChance})</div>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function calculateStats(items) {
+  const base = {
+    pointsFor: 0,
+    pointsAgainst: 0,
+    diff: 0,
+    soSuccess: 0,
+    soChance: 0,
+    bkSuccess: 0,
+    bkChance: 0
+  };
+
+  const byRotation = {};
+  rotationOrder.forEach(rot => byRotation[rot] = { ...base });
+
+  const total = { ...base };
+
+  items.forEach(item => {
+    const isHomePoint = item.scoredTeam === "home";
+
+    if (isHomePoint) total.pointsFor++;
+    else total.pointsAgainst++;
+
+    total.diff = total.pointsFor - total.pointsAgainst;
+
+    const targetRotation = item.beforeHomeRotation;
+
+    if (item.beforeServer === "away") {
+      total.soChance++;
+      if (isHomePoint) total.soSuccess++;
+    }
+
+    if (item.beforeServer === "home") {
+      total.bkChance++;
+      if (isHomePoint) total.bkSuccess++;
+    }
+
+    if (targetRotation !== "-" && byRotation[targetRotation]) {
+      const r = byRotation[targetRotation];
+
+      if (isHomePoint) r.pointsFor++;
+      else r.pointsAgainst++;
+
+      r.diff = r.pointsFor - r.pointsAgainst;
+
+      if (item.beforeServer === "away") {
+        r.soChance++;
+        if (isHomePoint) r.soSuccess++;
+      }
+
+      if (item.beforeServer === "home") {
+        r.bkChance++;
+        if (isHomePoint) r.bkSuccess++;
+      }
+    }
+  });
+
+  return { total, byRotation };
+}
+
+function ceilPercent(success, chance) {
+  if (!chance) return 0;
+  return Math.ceil((success / chance) * 100);
+}
+
+function rateClass(rate, type) {
+  if (type === "so") {
+    if (rate >= 50) return "home-text";
+    if (rate >= 30) return "";
+    return "away-text";
+  }
+
+  if (rate >= 30) return "home-text";
+  if (rate >= 20) return "";
+  return "away-text";
+}
+
+function diffClass(diff) {
+  if (diff > 0) return "home-text";
+  if (diff < 0) return "away-text";
+  return "gray-text";
+}
+
+function formatDiff(diff) {
+  return diff > 0 ? `+${diff}` : String(diff);
+}
+
+function getBestRotation(byRotation) {
+  let best = null;
+  let bestDiff = -999;
+
+  rotationOrder.forEach(rot => {
+    if (byRotation[rot].diff > bestDiff) {
+      bestDiff = byRotation[rot].diff;
+      best = rot;
+    }
+  });
+
+  return bestDiff > 0 ? best : null;
+}
+
+function getCurrentSetResultsForSave() {
+  const results = [...setResults];
+  const index = results.findIndex(s => s.setNumber === setNumber);
+
+  if (homeScore > 0 || awayScore > 0) {
+    const current = {
+      setNumber,
+      homeScore,
+      awayScore,
+      winner: homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "draw"
+    };
+
+    if (index >= 0) results[index] = current;
+    else results.push(current);
+  }
+
+  return results.sort((a,b) => a.setNumber - b.setNumber);
+}
+
+function getSetCount(results) {
+  let homeSets = 0;
+  let awaySets = 0;
+
+  results.forEach(s => {
+    if (s.winner === "home") homeSets++;
+    if (s.winner === "away") awaySets++;
+  });
+
+  return { homeSets, awaySets };
+}
+
+function saveMatch(goBack = false) {
+  const opponent = document.getElementById("opponentName").value || "未入力";
+  const matchDate = document.getElementById("matchDate").value || getTodayDateString();
+  const matchTitle = document.getElementById("matchTitle").value || "";
+  const matchVenue = document.getElementById("matchVenue").value || "";
+  const matchMemo = document.getElementById("matchMemo").value || "";
+  const savedSetResults = getCurrentSetResultsForSave();
+  const setCount = getSetCount(savedSetResults);
+
+  const matchData = {
+    id: currentMatchId || Date.now(),
+    opponent,
+    matchDate,
+    date: formatMatchDate(matchDate),
+    savedAt: new Date().toLocaleString("ja-JP"),
+    matchTitle,
+    matchVenue,
+    matchMemo,
+    setNumber,
+    setResults: savedSetResults,
+    setCount,
+    homeScore,
+    awayScore,
+    homeStartRotation: document.getElementById("startHomeRotation").value,
+    awayStartRotation: document.getElementById("startAwayRotation").value,
+    startServer: document.getElementById("startServer").value,
+    history
+  };
+
+  const index = matches.findIndex(m => m.id === matchData.id);
+
+  if (index >= 0) matches[index] = matchData;
+  else matches.unshift(matchData);
+
+  currentMatchId = matchData.id;
+  setResults = savedSetResults;
+  localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
+  isDirty = false;
+
+  if (goBack) goList();
+  else {
+    alert("保存しました");
+    updateDisplay();
+  }
+}
+
+function renderMatchList() {
+  const list = document.getElementById("matchList");
+  list.innerHTML = "";
+
+  list.classList.toggle("edit-mode", editMode);
+  list.classList.toggle("share-select-mode", shareSelectMode);
+
+  if (matches.length === 0) {
+    list.innerHTML = `<p style="color:#666; font-weight:700;">まだ試合がありません。</p>`;
+    return;
+  }
+
+  matches.forEach(match => {
+    const card = document.createElement("div");
+    card.className = "match-card";
+
+    const results = match.setResults || [];
+    const setCount = match.setCount || getSetCount(results);
+
+    const setPills = results.map(s => {
+      const cls = s.winner === "home" ? "home-text" : s.winner === "away" ? "away-text" : "gray-text";
+      return `<span class="set-pill">SET${s.setNumber} <span class="${cls}">${s.homeScore}-${s.awayScore}</span></span>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div onclick="handleMatchCardClick(${match.id})">
+        <div class="match-date">${formatMatchDate(match.matchDate || match.date)}${match.matchTitle ? "｜" + match.matchTitle : ""}</div>
+        <div class="match-opponent">vs ${match.opponent}</div>
+        ${match.matchVenue ? `<div class="match-date">会場：${match.matchVenue}</div>` : ""}
+        <div class="match-score">
+          <span class="home-text">${setCount.homeSets}</span>
+          <span> - </span>
+          <span class="away-text">${setCount.awaySets}</span>
+        </div>
+        <div class="set-list">${setPills}</div>
+      </div>
+      <div class="match-actions">
+        <label class="share-check-wrap" onclick="event.stopPropagation()">
+          <input class="share-check" type="checkbox" ${selectedMatchIds.has(match.id) ? "checked" : ""} onchange="toggleMatchSelection(event, ${match.id})" />
+        </label>
+        <button class="export-match-btn" onclick="exportSingleMatch(event, ${match.id})">📤 書き出し</button>
+        <button class="delete-btn" onclick="openDeleteModal(${match.id})">🗑</button>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+}
+
+function updateShareSelectionUI() {
+  const btn = document.getElementById("shareSelectModeBtn");
+  const actions = document.getElementById("selectionActions");
+  const count = document.getElementById("selectionCount");
+
+  if (btn) btn.textContent = shareSelectMode ? "完了" : "☑ 選択共有";
+  if (actions) actions.classList.toggle("show", shareSelectMode);
+  if (count) count.textContent = `${selectedMatchIds.size}試合選択中`;
+}
+
+function toggleShareSelectMode() {
+  shareSelectMode = !shareSelectMode;
+  if (shareSelectMode && editMode) {
+    editMode = false;
+    const editBtn = document.getElementById("editBtn");
+    if (editBtn) editBtn.textContent = "編集";
+  }
+  if (!shareSelectMode) selectedMatchIds.clear();
+  updateShareSelectionUI();
+  renderMatchList();
+}
+
+function handleMatchCardClick(id) {
+  if (shareSelectMode) {
+    toggleMatchSelectedById(id);
+    renderMatchList();
+    return;
+  }
+  openMatch(id);
+}
+
+function toggleMatchSelectedById(id) {
+  if (selectedMatchIds.has(id)) selectedMatchIds.delete(id);
+  else selectedMatchIds.add(id);
+  updateShareSelectionUI();
+}
+
+function toggleMatchSelection(event, id) {
+  event.stopPropagation();
+  if (event.target.checked) selectedMatchIds.add(id);
+  else selectedMatchIds.delete(id);
+  updateShareSelectionUI();
+}
+
+function selectAllMatchesForShare() {
+  selectedMatchIds = new Set(matches.map(m => m.id));
+  updateShareSelectionUI();
+  renderMatchList();
+}
+
+function clearSelectedMatches() {
+  selectedMatchIds.clear();
+  updateShareSelectionUI();
+  renderMatchList();
+}
+
+function openMatch(id) {
+  if (editMode) return;
+
+  const match = matches.find(m => m.id === id);
+  if (!match) return;
+
+  currentMatchId = match.id;
+  setNumber = match.setNumber || 1;
+  setResults = match.setResults || [];
+  statsView = "current";
+  historyView = "current";
+
+  document.getElementById("opponentName").value = match.opponent;
+  document.getElementById("matchDate").value = match.matchDate || getTodayDateString();
+  document.getElementById("matchTitle").value = match.matchTitle || "";
+  document.getElementById("matchVenue").value = match.matchVenue || "";
+  document.getElementById("matchMemo").value = match.matchMemo || "";
+  document.getElementById("startHomeRotation").value = match.homeStartRotation;
+  document.getElementById("startAwayRotation").value = match.awayStartRotation;
+  document.getElementById("startServer").value = match.startServer;
+
+  history = [...match.history];
+  homeScore = match.homeScore;
+  awayScore = match.awayScore;
+
+  const currentSetHistory = history.filter(item => item.setNumber === setNumber);
+
+  if (currentSetHistory.length > 0) {
+    const last = currentSetHistory[currentSetHistory.length - 1];
+    homeRotation = last.homeRotation;
+    awayRotation = last.awayRotation;
+    servingTeam = last.server;
+  } else {
+    homeRotation = match.homeStartRotation === "-" ? "-" : Number(match.homeStartRotation);
+    awayRotation = match.awayStartRotation === "-" ? "-" : Number(match.awayStartRotation);
+    servingTeam = match.startServer;
+  }
+
+  isDirty = false;
+  closeMatchInfo();
+  closeRotationInfo();
+  updateDisplay();
+  showScreen("scoreScreen");
+  setStatsMode("point");
+}
+
+function openDeleteModal(id) {
+  deleteTargetId = id;
+  const match = matches.find(m => m.id === id);
+  document.getElementById("deleteModalText").textContent = `vs ${match.opponent}`;
+  document.getElementById("deleteModal").style.display = "flex";
+}
+
+
+function createExportPayload(targetMatches, exportType = "matches") {
+  return {
+    app: "Volley Score Advance",
+    version: 2,
+    exportType,
+    exportedAt: new Date().toISOString(),
+    matches: targetMatches
+  };
+}
+
+function getPlusSettingsForExport() {
+  try {
+    return JSON.parse(localStorage.getItem("volleyPlusSettings")) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getExportHomeName() {
+  const settings = getPlusSettingsForExport();
+  return (settings.homeTeamName || "HOME").trim() || "HOME";
+}
+
+function sanitizeFileName(text, fallback = "match") {
+  return String(text || fallback)
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/[\s　]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40) || fallback;
+}
+
+function yymmddFromDate(dateString) {
+  const value = dateString || getTodayDateString();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value.slice(2, 4) + value.slice(5, 7) + value.slice(8, 10);
+  }
+
+  const d = new Date(value);
+  if (!Number.isNaN(d.getTime())) {
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yy}${mm}${dd}`;
+  }
+
+  return yymmddFromDate(getTodayDateString());
+}
+
+function getMatchExportBaseName(match) {
+  const datePart = yymmddFromDate(match && (match.matchDate || match.date));
+  const homeName = sanitizeFileName(getExportHomeName(), "HOME");
+  const awayName = sanitizeFileName(match && match.opponent, "AWAY");
+  return `${datePart}_${homeName}_vs_${awayName}`;
+}
+
+function getMatchExportSequence(match) {
+  const base = getMatchExportBaseName(match);
+  const sameCard = matches
+    .filter(m => getMatchExportBaseName(m) === base)
+    .slice()
+    .sort((a, b) => (a.id || 0) - (b.id || 0));
+
+  const index = sameCard.findIndex(m => m.id === match.id);
+  return String(index >= 0 ? index + 1 : sameCard.length + 1).padStart(2, "0");
+}
+
+function getSingleMatchFileName(match, ext = "json") {
+  return `${getMatchExportBaseName(match)}_${getMatchExportSequence(match)}.${ext}`;
+}
+
+function getSelectedMatchesFileName(selectedMatches, ext = "json") {
+  if (selectedMatches.length === 1) return getSingleMatchFileName(selectedMatches[0], ext);
+
+  const bases = Array.from(new Set(selectedMatches.map(getMatchExportBaseName)));
+  const dates = Array.from(new Set(selectedMatches.map(m => yymmddFromDate(m.matchDate || m.date))));
+  const homeName = sanitizeFileName(getExportHomeName(), "HOME");
+
+  if (bases.length === 1) {
+    return `${bases[0]}_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+  }
+
+  if (dates.length === 1) {
+    return `${dates[0]}_${homeName}_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+  }
+
+  return `volley_score_plus_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+}
+
+function downloadJsonFile(data, fileName) {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAllMatches() {
+  if (!matches.length) {
+    alert("書き出す試合データがありません");
+    return;
+  }
+
+  const ok = confirm(`保存済みの全${matches.length}試合を書き出しますか？`);
+  if (!ok) return;
+
+  const payload = createExportPayload(matches, "all");
+  const today = yymmddFromDate(getTodayDateString());
+  const homeName = sanitizeFileName(getExportHomeName(), "HOME");
+  downloadJsonFile(payload, `${today}_${homeName}_all_${String(matches.length).padStart(2, "0")}matches.json`);
+}
+
+function exportSelectedMatches() {
+  const selectedMatches = matches.filter(m => selectedMatchIds.has(m.id));
+
+  if (!selectedMatches.length) {
+    alert("共有する試合を選択してください");
+    return;
+  }
+
+  const ok = confirm(`${selectedMatches.length}試合を書き出しますか？`);
+  if (!ok) return;
+
+  const payload = createExportPayload(selectedMatches, selectedMatches.length === 1 ? "single" : "selected");
+  downloadJsonFile(payload, getSelectedMatchesFileName(selectedMatches));
+}
+
+function exportSingleMatch(event, id) {
+  if (event) event.stopPropagation();
+
+  const match = matches.find(m => m.id === id);
+  if (!match) return;
+
+  const payload = createExportPayload([match], "single");
+  downloadJsonFile(payload, getSingleMatchFileName(match));
+}
+
+function openImportFile() {
+  const input = document.getElementById("importFileInput");
+  if (!input) return;
+  input.value = "";
+  input.click();
+}
+
+function normalizeImportedMatches(importedData) {
+  if (Array.isArray(importedData)) return importedData;
+  if (importedData && Array.isArray(importedData.matches)) return importedData.matches;
+  if (importedData && importedData.history) return [importedData];
+  return [];
+}
+
+function makeImportedMatchCopy(match) {
+  const oldId = match.id || Date.now();
+  const newId = Date.now() + Math.floor(Math.random() * 1000000);
+  return {
+    ...match,
+    id: newId,
+    importedAt: new Date().toLocaleString("ja-JP"),
+    originalId: oldId,
+    savedAt: match.savedAt || new Date().toLocaleString("ja-JP"),
+    setResults: match.setResults || [],
+    setCount: match.setCount || getSetCount(match.setResults || []),
+    history: match.history || []
+  };
+}
+
+function importMatchesFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+      const importedMatches = normalizeImportedMatches(importedData);
+
+      if (!importedMatches.length) {
+        alert("読み込める試合データが見つかりませんでした");
+        return;
+      }
+
+      const ok = confirm(`${importedMatches.length}試合を読み込みますか？\n※現在の試合一覧には追加され、既存データは消えません。`);
+      if (!ok) return;
+
+      const copiedMatches = importedMatches.map(makeImportedMatchCopy);
+      matches = [...copiedMatches, ...matches];
+      localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
+      renderMatchList();
+      alert(`${copiedMatches.length}試合を読み込みました`);
+    } catch (error) {
+      console.error(error);
+      alert("読み込みに失敗しました。Volley Score Advanceで書き出したJSONファイルを選んでください。");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function closeDeleteModal() {
+  deleteTargetId = null;
+  document.getElementById("deleteModal").style.display = "none";
+}
+
+function confirmDelete() {
+  selectedMatchIds.delete(deleteTargetId);
+  matches = matches.filter(m => m.id !== deleteTargetId);
+  localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
+  closeDeleteModal();
+  renderMatchList();
+}
+
+
+
+function updateOfflineBadge() {
+  const badge = document.getElementById("offlineBadge");
+  if (!badge) return;
+  badge.classList.toggle("show", !navigator.onLine);
+}
+
+window.addEventListener("online", updateOfflineBadge);
+window.addEventListener("offline", updateOfflineBadge);
+updateOfflineBadge();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(err => {
+      console.log("Service Worker registration failed:", err);
+    });
+  });
+}
+
+renderMatchList();
+updateDisplay();
+setStatsMode("point");
+</script>
+
+
+<style>
+/* ===== Report Mode v5 integrated ===== */
+
+.report-open-btn {
+  width: 100%;
+  border: none;
+  background: #111;
+  color: white;
+  border-radius: 12px;
+  padding: 13px 0;
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0 0 16px;
+}
+
+.report-screen {
+  background: #eef3ff;
+  min-height: 100vh;
+}
+
+.report-header {
+  background: linear-gradient(135deg, #1557e6, #0b2b7a);
+  color: white;
+  margin: 0 -18px 16px;
+  padding: 18px;
+}
+
+.report-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.report-title-main {
+  font-size: 26px;
+  font-weight: 1000;
+  letter-spacing: 1px;
+}
+
+.report-title-sub {
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.report-action-btn {
+  border: none;
+  background: white;
+  color: #1557e6;
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.report-page {
+  background: white;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+}
+
+.report-section {
+  border: 1px solid #d8e3ff;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fff;
+}
+
+.report-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0b3a9e;
+  font-size: 17px;
+  font-weight: 1000;
+  margin-bottom: 10px;
+}
+
+.report-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #1557e6;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 1000;
+}
+
+.report-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.report-info-item {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 9px;
+  border-radius: 10px;
+  background: #f6f8ff;
+}
+
+.report-info-label {
+  color: #0b3a9e;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.report-info-value {
+  font-size: 15px;
+  font-weight: 900;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.report-score-main {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.report-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.report-team-name {
+  border-radius: 12px;
+  padding: 10px 6px;
+  font-size: 14px;
+  font-weight: 1000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-team-name.home {
+  background: #1557e6;
+  color: white;
+}
+
+.report-team-name.away {
+  background: #eee;
+  color: #333;
+}
+
+.report-set-count {
+  font-size: 27px;
+  font-weight: 1000;
+  color: #111;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.report-set-scores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.report-set-score {
+  border-radius: 12px;
+  background: #f8f8f8;
+  padding: 9px 4px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.report-set-label {
+  font-size: 12px;
+  color: #1557e6;
+  margin-bottom: 3px;
+}
+
+.report-set-score-num {
+  font-size: 20px;
+}
+
+.report-table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.report-table th {
+  background: #1557e6;
+  color: white;
+  padding: 8px 4px;
+  border: 1px solid #d8e3ff;
+  white-space: nowrap;
+}
+
+.report-table td {
+  padding: 8px 4px;
+  border: 1px solid #d8e3ff;
+  text-align: center;
+  font-weight: 900;
+}
+
+.report-table td:first-child {
+  text-align: left;
+  color: #0b3a9e;
+}
+
+.report-point-layout {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+
+.report-team-point-block {
+  border: 1px solid #d8e3ff;
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 10px;
+  background: #fbfcff;
+}
+
+.report-team-point-title {
+  font-size: 14px;
+  font-weight: 1000;
+  margin-bottom: 8px;
+}
+
+.report-team-point-block.away {
+  background: #fffafa;
+}
+
+.report-pie {
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.report-pie::after {
+  content: "";
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.report-pie-center {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  font-weight: 1000;
+  font-size: 12px;
+}
+
+.report-pie-total {
+  font-size: 21px;
+}
+
+.report-legend {
+  display: grid;
+  gap: 7px;
+}
+
+.report-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.report-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.report-rate-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.report-rate-card {
+  border-radius: 14px;
+  background: #f6f8ff;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.report-rate-team {
+  font-size: 13px;
+  font-weight: 1000;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-rate-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.report-rate-box {
+  background: white;
+  border-radius: 12px;
+  padding: 9px 4px;
+}
+
+.report-rate-label {
+  font-size: 12px;
+  color: #555;
+  font-weight: 900;
+}
+
+.report-rate-value {
+  font-size: 25px;
+  font-weight: 1000;
+  color: #1557e6;
+}
+
+.report-rotation-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.report-rotation-card {
+  border-radius: 14px;
+  border: 1px solid #d8e3ff;
+  padding: 10px;
+  background: #fff;
+}
+
+.report-rotation-title {
+  font-weight: 1000;
+  color: #0b3a9e;
+  margin-bottom: 8px;
+}
+
+.report-rotation-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 44px 1fr 44px;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.report-bar-bg {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e5e5;
+  overflow: hidden;
+}
+
+.report-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #1557e6;
+}
+
+.report-footer {
+  text-align: center;
+  color: #1557e6;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 10px;
+}
+
+.setting-modal-grid {
+  text-align: left;
+  margin: 14px 0;
+}
+
+@media (min-width: 700px) {
+  .report-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  .report-info-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .report-info-item {
+    grid-template-columns: 1fr;
+  }
+
+  .report-rotation-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-team-name {
+    font-size: 16px;
+  }
+
+  .report-set-count {
+    font-size: 32px;
+  }
+
+  .report-teams {
+    grid-template-columns: minmax(0, 1fr) 74px minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 7mm;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    background: white !important;
+  }
+
+  body {
+    margin: 0 !important;
+  }
+
+  .app {
+    max-width: none !important;
+    width: 100% !important;
+    min-height: auto !important;
+    background: white !important;
+  }
+
+  .screen {
+    display: none !important;
+  }
+
+  #reportScreen {
+    display: block !important;
+    padding: 0 !important;
+    background: white !important;
+    min-height: auto !important;
+  }
+
+  .report-header {
+    margin: 0 0 4mm !important;
+    padding: 6mm 6mm 5mm !important;
+    border-radius: 0 !important;
+  }
+
+  .report-title-main {
+    font-size: 18pt !important;
+    line-height: 1 !important;
+  }
+
+  .report-title-sub {
+    font-size: 8.5pt !important;
+    margin-top: 1mm !important;
+  }
+
+  .report-actions,
+  .offline-badge,
+  .report-open-btn {
+    display: none !important;
+  }
+
+  .report-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  #reportContent {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto auto !important;
+    gap: 4mm !important;
+    align-items: stretch !important;
+  }
+
+  #reportContent .report-section:nth-child(1),
+  #reportContent .report-section:nth-child(2),
+  #reportContent .report-section:nth-child(3),
+  #reportContent .report-section:nth-child(4) {
+    grid-column: 1 !important;
+  }
+
+  .report-section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border-radius: 9px !important;
+    padding: 7px !important;
+    margin: 0 !important;
+  }
+
+  .report-section-title {
+    font-size: 10pt !important;
+    margin-bottom: 4px !important;
+    gap: 4px !important;
+  }
+
+  .report-num {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 5px !important;
+    font-size: 10pt !important;
+  }
+
+  .report-info-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 5px !important;
+  }
+
+  .report-info-item {
+    grid-template-columns: 46px 1fr !important;
+    gap: 5px !important;
+    padding: 6px !important;
+    border-radius: 7px !important;
+  }
+
+  .report-info-label {
+    font-size: 7.5pt !important;
+  }
+
+  .report-info-value {
+    font-size: 8.5pt !important;
+  }
+
+  .report-score-main {
+    padding: 0 !important;
+  }
+
+  .report-teams {
+    grid-template-columns: minmax(0, 1fr) 46px minmax(0, 1fr) !important;
+    gap: 4px !important;
+  }
+
+  .report-team-name {
+    padding: 6px 4px !important;
+    border-radius: 8px !important;
+    font-size: 8.5pt !important;
+  }
+
+  .report-set-count {
+    font-size: 20pt !important;
+  }
+
+  .report-set-scores {
+    gap: 4px !important;
+    margin-top: 6px !important;
+  }
+
+  .report-set-score {
+    padding: 5px 2px !important;
+    border-radius: 8px !important;
+  }
+
+  .report-set-label {
+    font-size: 7pt !important;
+    margin-bottom: 1px !important;
+  }
+
+  .report-set-score-num {
+    font-size: 11pt !important;
+  }
+
+  .report-table {
+    font-size: 8.2pt !important;
+  }
+
+  .report-table th,
+  .report-table td {
+    padding: 5px 3px !important;
+  }
+
+  .report-point-layout {
+    grid-template-columns: 100px 1fr !important;
+    gap: 8px !important;
+    margin-top: 7px !important;
+  }
+
+
+  .report-team-point-block {
+    border-radius: 8px !important;
+    padding: 6px !important;
+    margin-top: 5px !important;
+  }
+
+  .report-team-point-title {
+    font-size: 8.8pt !important;
+    margin-bottom: 4px !important;
+  }
+
+  .report-pie {
+    width: 92px !important;
+    height: 92px !important;
+  }
+
+  .report-pie::after {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .report-pie-center {
+    font-size: 6.5pt !important;
+  }
+
+  .report-pie-total {
+    font-size: 12pt !important;
+  }
+
+  .report-legend {
+    gap: 2px !important;
+  }
+
+  .report-legend-row {
+    grid-template-columns: 8px 1fr auto !important;
+    gap: 4px !important;
+    font-size: 7.2pt !important;
+  }
+
+  .report-dot {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  .report-rate-main {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px !important;
+  }
+
+  .report-rate-card {
+    padding: 7px !important;
+    border-radius: 9px !important;
+  }
+
+  .report-rate-team {
+    font-size: 8pt !important;
+    margin-bottom: 3px !important;
+  }
+
+  .report-rate-row {
+    gap: 4px !important;
+  }
+
+  .report-rate-box {
+    padding: 5px 2px !important;
+    border-radius: 7px !important;
+  }
+
+  .report-rate-label {
+    font-size: 7pt !important;
+  }
+
+  .report-rate-value {
+    font-size: 15pt !important;
+  }
+
+  .report-rotation-layout {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    margin-top: 6px !important;
+  }
+
+  .report-rotation-card {
+    border-radius: 8px !important;
+    padding: 5px !important;
+  }
+
+  .report-rotation-title {
+    font-size: 8.5pt !important;
+    margin-bottom: 3px !important;
+  }
+
+  .report-rotation-row {
+    grid-template-columns: 26px 1fr 32px 1fr 32px !important;
+    gap: 4px !important;
+    margin-bottom: 3px !important;
+    font-size: 7.5pt !important;
+  }
+
+  .report-bar-bg {
+    height: 5px !important;
+  }
+
+  .report-footer {
+    display: none !important;
+  }
+}
+</style>
+
+<script>
+/* ===== Report Mode Add-on v5 integrated ===== */
+(function () {
+  const REPORT_COLORS = ["#1557e6", "#43a047", "#fb8c00", "#e91f26", "#8e24aa", "#00acc1"];
+
+  function safeQuery(id) {
+    return document.getElementById(id);
+  }
+
+  function safeValue(id, fallback = "") {
+    const el = safeQuery(id);
+    return el ? el.value || fallback : fallback;
+  }
+
+  function getVolleyPlusSettings() {
+    try {
+      return JSON.parse(localStorage.getItem("volleyPlusSettings")) || { homeTeamName: "HOME" };
+    } catch (e) {
+      return { homeTeamName: "HOME" };
+    }
+  }
+
+  function getHomeTeamName() {
+    const settings = getVolleyPlusSettings();
+    return settings.homeTeamName || "HOME";
+  }
+
+  window.openSettingsModal = function () {
+    const settings = getVolleyPlusSettings();
+    const input = safeQuery("settingHomeTeamName");
+    if (input) input.value = settings.homeTeamName || "HOME";
+    const modal = safeQuery("settingsModal");
+    if (modal) modal.style.display = "flex";
+  };
+
+  window.closeSettingsModal = function () {
+    const modal = safeQuery("settingsModal");
+    if (modal) modal.style.display = "none";
+  };
+
+  window.saveSettingsModal = function () {
+    const homeTeamName = safeValue("settingHomeTeamName", "HOME").trim() || "HOME";
+    localStorage.setItem("volleyPlusSettings", JSON.stringify({ homeTeamName }));
+    window.closeSettingsModal();
+    alert("設定を保存しました");
+  };
+
+  function placeReportButtonUnderStats() {
+    const statsBox = safeQuery("statsBox");
+    if (!statsBox) return;
+
+    let btn = safeQuery("reportOpenBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "reportOpenBtn";
+      btn.className = "report-open-btn";
+      btn.type = "button";
+      btn.textContent = "📄 レポートモード";
+      btn.onclick = window.openReportMode;
+    }
+
+    statsBox.insertAdjacentElement("afterend", btn);
+  }
+
+  window.openReportMode = function () {
+    if (typeof saveMatch === "function") {
+      try { saveMatch(false); } catch (e) {}
+    }
+
+    renderReport();
+
+    if (typeof showScreen === "function") {
+      showScreen("reportScreen");
+    } else {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const reportScreen = safeQuery("reportScreen");
+      if (reportScreen) reportScreen.classList.add("active");
+    }
+
+    window.scrollTo(0, 0);
+  };
+
+  window.closeReportMode = function () {
+    if (typeof showScreen === "function") {
+      showScreen("scoreScreen");
+    } else {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const scoreScreen = safeQuery("scoreScreen");
+      if (scoreScreen) scoreScreen.classList.add("active");
+    }
+
+    window.scrollTo(0, 0);
+  };
+
+  function getReportPdfTitle() {
+    try {
+      const match = {
+        matchDate: safeValue("matchDate", getTodayDateString()),
+        opponent: safeValue("opponentName", "AWAY") || "AWAY",
+        id: currentMatchId || Date.now()
+      };
+      if (typeof getSingleMatchFileName === "function") {
+        return getSingleMatchFileName(match, "pdf").replace(/\.pdf$/, "");
+      }
+    } catch (e) {}
+    return "Volley_Score_Plus_Report";
+  }
+
+  window.printReport = function () {
+    renderReport();
+
+    const oldTitle = document.title;
+    document.title = getReportPdfTitle();
+
+    // スマホChromeでは、DOM更新直後の window.print() が無反応になることがあるため、
+    // ボタン押下イベント内で少しだけ遅延させてから印刷ダイアログを開く。
+    setTimeout(() => {
+      try {
+        if (typeof window.print === "function") {
+          window.print();
+        } else {
+          alert("このブラウザではPDF保存に対応していません。ChromeまたはSafariの共有メニューから印刷/PDF保存をお試しください。");
+        }
+      } catch (e) {
+        alert("PDF保存を開けませんでした。ブラウザのメニューから『共有』→『印刷』または『PDF保存』をお試しください。");
+      }
+
+      setTimeout(() => { document.title = oldTitle; }, 1200);
+    }, 80);
+  };
+
+  function reportFormatDate(value) {
+    if (!value) return "未入力";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [y, m, d] = value.split("-");
+      return `${y}/${Number(m)}/${Number(d)}`;
+    }
+    return value;
+  }
+
+  function getItemSetNumber(item) {
+    return Number(item.setNumber ?? item.setNo ?? item.set ?? item.currentSet ?? item.setIndex ?? 1);
+  }
+
+  function getCurrentHistory() {
+    try {
+      if (typeof history !== "undefined" && Array.isArray(history)) return history;
+    } catch (e) {}
+    return [];
+  }
+
+  function getReportSetResults() {
+    try {
+      if (typeof getCurrentSetResultsForSave === "function") {
+        const r = getCurrentSetResultsForSave();
+        if (Array.isArray(r)) return r;
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof setResults !== "undefined" && Array.isArray(setResults) && setResults.length) {
+        return setResults;
+      }
+    } catch (e) {}
+
+    const items = getCurrentHistory();
+    const setMap = {};
+
+    items.forEach(item => {
+      const setNo = getItemSetNumber(item);
+      if (!setNo) return;
+      if (!setMap[setNo]) setMap[setNo] = { setNumber: setNo, homeScore: 0, awayScore: 0 };
+      const scoredTeam = getItemScoredTeam(item);
+      if (scoredTeam === "home") setMap[setNo].homeScore++;
+      if (scoredTeam === "away") setMap[setNo].awayScore++;
+    });
+
+    return Object.values(setMap).map(s => ({
+      ...s,
+      winner: s.homeScore > s.awayScore ? "home" : s.awayScore > s.homeScore ? "away" : "draw"
+    })).sort((a, b) => a.setNumber - b.setNumber);
+  }
+
+  function getReportSetCount(results) {
+    try {
+      if (typeof getSetCount === "function") return getSetCount(results);
+    } catch (e) {}
+
+    let homeSets = 0;
+    let awaySets = 0;
+
+    results.forEach(s => {
+      if (s.winner === "home") homeSets++;
+      else if (s.winner === "away") awaySets++;
+      else if (Number(s.homeScore) > Number(s.awayScore)) homeSets++;
+      else if (Number(s.awayScore) > Number(s.homeScore)) awaySets++;
+    });
+
+    return { homeSets, awaySets };
+  }
+
+  function getItemsBySet(setNo) {
+    return getCurrentHistory().filter(item => getItemSetNumber(item) === Number(setNo));
+  }
+
+  function getAllReportItems() {
+    return getCurrentHistory();
+  }
+
+  function getItemScoredTeam(item) {
+    const v = item.scoredTeam ?? item.pointTeam ?? item.team ?? item.scorer ?? item.winner ?? item.side ?? item.addedTeam ?? "";
+    if (v === "H" || v === "homeTeam" || v === "HOME" || v === "自チーム") return "home";
+    if (v === "A" || v === "awayTeam" || v === "AWAY" || v === "相手") return "away";
+    return v;
+  }
+
+  function getItemReason(item) {
+    return item.reason ?? item.scoringReason ?? item.pointReason ?? item.scoreReason ?? item.reasonType ?? item.type ?? item.cause ?? item.label ?? "";
+  }
+
+  function getItemServer(item) {
+    const v = item.beforeServer ?? item.server ?? item.servingTeam ?? item.serveTeam ?? item.currentServer ?? item.serverTeam ?? "";
+    if (v === "H" || v === "homeTeam" || v === "HOME" || v === "自チーム") return "home";
+    if (v === "A" || v === "awayTeam" || v === "AWAY" || v === "相手") return "away";
+    return v;
+  }
+
+  function getHomeRotation(item) {
+    return item.beforeHomeRotation ?? item.homeRotation ?? item.homeRot ?? item.homeRotationBefore ?? item.rotationHome ?? "-";
+  }
+
+  function getAwayRotation(item) {
+    return item.beforeAwayRotation ?? item.awayRotation ?? item.awayRot ?? item.awayRotationBefore ?? item.rotationAway ?? "-";
+  }
+
+  function getRotationOrder() {
+    try {
+      if (typeof rotationOrder !== "undefined" && Array.isArray(rotationOrder)) return rotationOrder;
+    } catch (e) {}
+    return [1, 2, 3, 4, 5, 6];
+  }
+
+  function normalizeRotation(rot) {
+    if (rot === undefined || rot === null) return "-";
+    const s = String(rot).trim();
+
+    if (s === "-") return "-";
+
+    const order = getRotationOrder();
+    const wantsNumberKey = order.some(v => typeof v === "number" || /^[1-6]$/.test(String(v)));
+
+    let n = null;
+
+    if (/^[RS][1-6]$/i.test(s)) {
+      n = Number(s.replace(/[RS]/i, ""));
+    } else if (/^[1-6]$/.test(s)) {
+      n = Number(s);
+    } else {
+      const found = s.match(/[1-6]/);
+      if (found) n = Number(found[0]);
+    }
+
+    if (n) return wantsNumberKey ? n : `R${n}`;
+    return s;
+  }
+
+  function rotationLabel(rot) {
+    try {
+      if (typeof rotationMap !== "undefined" && rotationMap && rotationMap[rot]) return rotationMap[rot];
+    } catch (e) {}
+    if (/^[1-6]$/.test(String(rot))) {
+      const labels = {1:"S1",2:"S6",3:"S5",4:"S4",5:"S3",6:"S2"};
+      return labels[rot] || `S${rot}`;
+    }
+    return rot;
+  }
+
+  function getReasonDisplayName(reason, scoredTeam) {
+    const r = String(reason || "").trim();
+    if (!r) return "不明";
+
+    try {
+      if (typeof scoringReasons !== "undefined" && scoringReasons.includes(r)) return r;
+      if (typeof mistakeReasons !== "undefined" && mistakeReasons.includes(r)) {
+        return scoredTeam === "home" ? `相手${r.replace("失点", "ミス")}` : `自チーム${r.replace("失点", "ミス")}`;
+      }
+    } catch (e) {}
+
+    if (r.includes("失点")) {
+      return scoredTeam === "home" ? `相手${r.replace("失点", "ミス")}` : `自チーム${r.replace("失点", "ミス")}`;
+    }
+
+    return r;
+  }
+
+  function getPointReasonLabel(reason, scoredTeam, targetTeam) {
+    const r = String(reason || "").trim();
+    if (!r) return "不明";
+
+    try {
+      if (typeof scoringReasons !== "undefined" && scoringReasons.includes(r)) return r;
+      if (typeof mistakeReasons !== "undefined" && mistakeReasons.includes(r)) {
+        return scoredTeam === targetTeam ? r : `相手${r.replace("失点", "ミス")}`;
+      }
+    } catch (e) {}
+
+    if (r.includes("失点")) {
+      return scoredTeam === targetTeam ? r : `相手${r.replace("失点", "ミス")}`;
+    }
+
+    return r;
+  }
+
+  function calculatePointReasonStatsForTeam(items, team) {
+    const result = {};
+
+    items.forEach(item => {
+      const scoredTeam = getItemScoredTeam(item);
+      if (scoredTeam !== team) return;
+
+      const label = getPointReasonLabel(getItemReason(item), scoredTeam, team);
+      result[label] = (result[label] || 0) + 1;
+    });
+
+    return result;
+  }
+
+  function calculateReasonStatsBySetForTeam(setNumbers, team) {
+    const reasonSet = new Set();
+
+    setNumbers.forEach(setNo => {
+      const stats = calculatePointReasonStatsForTeam(getItemsBySet(setNo), team);
+      Object.keys(stats).forEach(reason => reasonSet.add(reason));
+    });
+
+    const totalStats = calculatePointReasonStatsForTeam(getAllReportItems(), team);
+    Object.keys(totalStats).forEach(reason => reasonSet.add(reason));
+
+    return {
+      reasons: Array.from(reasonSet),
+      totalStats
+    };
+  }
+
+  function makePieStyle(stats) {
+    const entries = Object.entries(stats).filter(([, value]) => value > 0);
+    const total = entries.reduce((sum, [, value]) => sum + value, 0);
+
+    if (!total) return "background:#e5e5e5;";
+
+    let current = 0;
+    const parts = entries.map(([label, value], index) => {
+      const start = current;
+      const end = current + (value / total) * 100;
+      current = end;
+      const color = REPORT_COLORS[index % REPORT_COLORS.length];
+      return `${color} ${start}% ${end}%`;
+    });
+
+    return `background: conic-gradient(${parts.join(", ")});`;
+  }
+
+  function reportPercent(value, total) {
+    if (!total) return 0;
+    return Math.round((value / total) * 100);
+  }
+
+  function renderTeamPointReasonBlock(setNumbers, team, teamName) {
+    const { reasons, totalStats } = calculateReasonStatsBySetForTeam(setNumbers, team);
+    const total = Object.values(totalStats).reduce((sum, value) => sum + value, 0);
+    const teamClass = team === "home" ? "home-text" : "away-text";
+
+    if (!total) {
+      return `
+        <div class="report-team-point-block ${team}">
+          <div class="report-team-point-title ${teamClass}">${teamName} 点数情報</div>
+          <div style="font-weight:900; color:#666;">まだ得点理由データがありません。</div>
+        </div>
+      `;
+    }
+
+    let tableRows = "";
+
+    reasons.forEach(reason => {
+      const setCells = setNumbers.map(setNo => {
+        const stats = calculatePointReasonStatsForTeam(getItemsBySet(setNo), team);
+        return `<td>${stats[reason] || 0}</td>`;
+      }).join("");
+
+      tableRows += `
+        <tr>
+          <td>${reason}</td>
+          ${setCells}
+          <td>${totalStats[reason] || 0}</td>
+        </tr>
+      `;
+    });
+
+    const legend = Object.entries(totalStats)
+      .filter(([, value]) => value > 0)
+      .map(([reason, value], index) => {
+        const color = REPORT_COLORS[index % REPORT_COLORS.length];
+        return `
+          <div class="report-legend-row">
+            <span class="report-dot" style="background:${color};"></span>
+            <span>${reason}</span>
+            <span>${value}点（${reportPercent(value, total)}%）</span>
+          </div>
+        `;
+      }).join("");
+
+    return `
+      <div class="report-team-point-block ${team}">
+        <div class="report-team-point-title ${teamClass}">${teamName} 点数情報</div>
+
+        <div class="report-table-wrap">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>得点理由</th>
+                ${setNumbers.map(n => `<th>SET${n}</th>`).join("")}
+                <th>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-point-layout">
+          <div class="report-pie" style="${makePieStyle(totalStats)}">
+            <div class="report-pie-center">
+              TOTAL
+              <div class="report-pie-total">${total}</div>
+              得点
+            </div>
+          </div>
+
+          <div class="report-legend">
+            ${legend}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPointReasonReport(setNumbers, homeName, awayName) {
+    if (!setNumbers.length) {
+      setNumbers = Array.from(new Set(getAllReportItems().map(getItemSetNumber).filter(Boolean))).sort((a, b) => a - b);
+    }
+
+    return `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">3</span>点数情報</div>
+        ${renderTeamPointReasonBlock(setNumbers, "home", homeName)}
+        ${renderTeamPointReasonBlock(setNumbers, "away", awayName)}
+      </div>
+    `;
+  }
+
+  function calculateStatsForTeam(items, team) {
+    const base = { soSuccess: 0, soChance: 0, bkSuccess: 0, bkChance: 0 };
+    const order = getRotationOrder();
+    const byRotation = {};
+    order.forEach(rot => byRotation[rot] = { ...base });
+
+    const total = { ...base };
+
+    items.forEach(item => {
+      const scoredTeam = getItemScoredTeam(item);
+      const isPoint = scoredTeam === team;
+      const server = getItemServer(item);
+      const targetRotation = normalizeRotation(team === "home" ? getHomeRotation(item) : getAwayRotation(item));
+
+      if (!server) return;
+
+      if (server !== team) {
+        total.soChance++;
+        if (isPoint) total.soSuccess++;
+      }
+
+      if (server === team) {
+        total.bkChance++;
+        if (isPoint) total.bkSuccess++;
+      }
+
+      if (targetRotation !== "-" && byRotation[targetRotation]) {
+        const r = byRotation[targetRotation];
+
+        if (server !== team) {
+          r.soChance++;
+          if (isPoint) r.soSuccess++;
+        }
+
+        if (server === team) {
+          r.bkChance++;
+          if (isPoint) r.bkSuccess++;
+        }
+      }
+    });
+
+    return { total, byRotation };
+  }
+
+  function pct(success, chance) {
+    if (!chance) return 0;
+    return Math.ceil((success / chance) * 100);
+  }
+
+  function renderRotationRows(stats) {
+    return getRotationOrder().map(rot => {
+      const r = stats.byRotation[rot] || { soSuccess: 0, soChance: 0, bkSuccess: 0, bkChance: 0 };
+      const so = pct(r.soSuccess, r.soChance);
+      const bk = pct(r.bkSuccess, r.bkChance);
+
+      return `
+        <div class="report-rotation-row">
+          <div>${rotationLabel(rot)}</div>
+
+          <div class="report-bar-bg">
+            <div class="report-bar-fill" style="width:${so}%;"></div>
+          </div>
+          <div>${so}%</div>
+
+          <div class="report-bar-bg">
+            <div class="report-bar-fill" style="width:${bk}%; background:#43a047;"></div>
+          </div>
+          <div>${bk}%</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderSideoutBreakReport(homeName, awayName) {
+    const items = getAllReportItems();
+    const homeStats = calculateStatsForTeam(items, "home");
+    const awayStats = calculateStatsForTeam(items, "away");
+
+    const homeSO = pct(homeStats.total.soSuccess, homeStats.total.soChance);
+    const homeBK = pct(homeStats.total.bkSuccess, homeStats.total.bkChance);
+    const awaySO = pct(awayStats.total.soSuccess, awayStats.total.soChance);
+    const awayBK = pct(awayStats.total.bkSuccess, awayStats.total.bkChance);
+
+    return `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">4</span>サイドアウト率・ブレイク率</div>
+
+        <div class="report-rate-main">
+          <div class="report-rate-card">
+            <div class="report-rate-team home-text">${homeName}</div>
+            <div class="report-rate-row">
+              <div class="report-rate-box">
+                <div class="report-rate-label">SO率</div>
+                <div class="report-rate-value">${homeSO}%</div>
+              </div>
+              <div class="report-rate-box">
+                <div class="report-rate-label">BK率</div>
+                <div class="report-rate-value" style="color:#43a047;">${homeBK}%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-rate-card">
+            <div class="report-rate-team away-text">${awayName}</div>
+            <div class="report-rate-row">
+              <div class="report-rate-box">
+                <div class="report-rate-label">SO率</div>
+                <div class="report-rate-value">${awaySO}%</div>
+              </div>
+              <div class="report-rate-box">
+                <div class="report-rate-label">BK率</div>
+                <div class="report-rate-value" style="color:#43a047;">${awayBK}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-rotation-layout">
+          <div class="report-rotation-card">
+            <div class="report-rotation-title">${homeName} ローテ別</div>
+            <div class="report-rotation-row" style="color:#666;">
+              <div></div><div>SO</div><div></div><div>BK</div><div></div>
+            </div>
+            ${renderRotationRows(homeStats)}
+          </div>
+
+          <div class="report-rotation-card">
+            <div class="report-rotation-title">${awayName} ローテ別</div>
+            <div class="report-rotation-row" style="color:#666;">
+              <div></div><div>SO</div><div></div><div>BK</div><div></div>
+            </div>
+            ${renderRotationRows(awayStats)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderReport() {
+    const homeName = getHomeTeamName();
+    const awayName = safeValue("opponentName", "AWAY") || "AWAY";
+
+    const matchDate = safeValue("matchDate", "");
+    const matchTitle = safeValue("matchTitle", "未入力") || "未入力";
+    const matchVenue = safeValue("matchVenue", "未入力") || "未入力";
+
+    const results = getReportSetResults();
+    const setCount = getReportSetCount(results);
+    const setNumbers = results.map(s => Number(s.setNumber)).filter(Boolean).sort((a, b) => a - b);
+
+    const setScoreHtml = results.map(s => {
+      const homeScore = Number(s.homeScore) || 0;
+      const awayScore = Number(s.awayScore) || 0;
+      const homeCls = homeScore > awayScore ? "home-text" : "";
+      const awayCls = awayScore > homeScore ? "away-text" : "";
+
+      return `
+        <div class="report-set-score">
+          <div class="report-set-label">第${s.setNumber}セット</div>
+          <div class="report-set-score-num">
+            <span class="${homeCls}">${homeScore}</span>
+            -
+            <span class="${awayCls}">${awayScore}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const reportContent = safeQuery("reportContent");
+    if (!reportContent) {
+      alert("レポート表示エリアが見つかりません。");
+      return;
+    }
+
+    reportContent.innerHTML = `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">1</span>試合情報</div>
+        <div class="report-info-grid">
+          <div class="report-info-item">
+            <div class="report-info-label">日付</div>
+            <div class="report-info-value">${reportFormatDate(matchDate)}</div>
+          </div>
+          <div class="report-info-item">
+            <div class="report-info-label">大会名</div>
+            <div class="report-info-value">${matchTitle}</div>
+          </div>
+          <div class="report-info-item">
+            <div class="report-info-label">会場</div>
+            <div class="report-info-value">${matchVenue}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">2</span>試合結果</div>
+        <div class="report-score-main">
+          <div class="report-teams">
+            <div class="report-team-name home">${homeName}</div>
+            <div class="report-set-count">
+              <span class="home-text">${setCount.homeSets}</span>-<span class="away-text">${setCount.awaySets}</span>
+            </div>
+            <div class="report-team-name away">${awayName}</div>
+          </div>
+
+          <div class="report-set-scores">
+            ${setScoreHtml || `<div style="font-weight:900; color:#666;">セット結果がありません</div>`}
+          </div>
+        </div>
+      </div>
+
+      ${renderPointReasonReport(setNumbers, homeName, awayName)}
+
+      ${renderSideoutBreakReport(homeName, awayName)}
+    `;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!safeQuery("reportScreen")) {
+      const app = document.querySelector(".app") || document.body;
+      const div = document.createElement("div");
+      div.id = "reportScreen";
+      div.className = "screen report-screen";
+      div.innerHTML = `
+        <div class="report-header">
+          <div class="report-header-row">
+            <div>
+              <div class="report-title-main">MATCH REPORT</div>
+              <div class="report-title-sub">Volley Score Advance 試合レポート</div>
+            </div>
+            <div class="report-actions">
+              <button class="report-action-btn" type="button" onclick="closeReportMode()">戻る</button>
+              <button class="report-action-btn" type="button" onclick="printReport()">PDF保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-page" id="reportPage">
+          <div id="reportContent"></div>
+          <div class="report-footer">Powered by Volley Score Advance</div>
+        </div>
+      `;
+      app.appendChild(div);
+    }
+
+    if (!safeQuery("settingsModal")) {
+      const div = document.createElement("div");
+      div.className = "modal-bg";
+      div.id = "settingsModal";
+      div.innerHTML = `
+        <div class="modal">
+          <div class="modal-title">アプリ設定</div>
+          <div class="modal-text">レポートに表示する自チーム名を設定します</div>
+
+          <div class="setting-modal-grid">
+            <label>HOMEチーム名</label>
+            <input id="settingHomeTeamName" placeholder="例：QUEENSEIS" />
+          </div>
+
+          <button class="primary-btn" onclick="saveSettingsModal()">保存する</button>
+          <button class="cancel-btn" onclick="closeSettingsModal()">キャンセル</button>
+        </div>
+      `;
+      document.body.appendChild(div);
+    }
+
+    placeReportButtonUnderStats();
+  });
+})();
+</script>
+
+
+</body>
+</html>

@@ -6043,5 +6043,99 @@ setTimeout(() => {
 }, 0);
 </script>
 
+
+<script>
+/* ===== Advance v17 duplicate player guard ===== */
+function getCourtNumbersForDuplicateCheck(mode = "starter", excludePos = null) {
+  let players;
+
+  if (mode === "substitution") {
+    if (!activeCourtPlayers) {
+      activeCourtPlayers = getBaseRotatedPlayersForCurrentRotation();
+    }
+    players = activeCourtPlayers;
+  } else {
+    players = starterPlayers;
+  }
+
+  return Object.entries(players || {})
+    .filter(([pos, number]) => pos !== excludePos && number && number !== "ー")
+    .map(([pos, number]) => String(number));
+}
+
+function isPlayerAlreadyOnCourt(number, mode = "starter", excludePos = null) {
+  if (!number || number === "ー") return false;
+  return getCourtNumbersForDuplicateCheck(mode, excludePos).includes(String(number));
+}
+
+function showDuplicatePlayerAlert(number) {
+  alert(`#${number} はすでにコート内に入っています。\n同じ番号の選手は2人以上入れられません。`);
+}
+
+const originalSelectMemberForPositionDuplicateGuard = window.selectMemberForPosition || selectMemberForPosition;
+window.selectMemberForPosition = function (number) {
+  if (pendingMemberSelectMode === "starter") {
+    if (isPlayerAlreadyOnCourt(number, "starter", pendingMemberPosition)) {
+      showDuplicatePlayerAlert(number);
+      return;
+    }
+  }
+
+  if (pendingMemberSelectMode === "score") {
+    // 未設定の場所に得点者として割り当てる時も重複禁止
+    if (isPlayerAlreadyOnCourt(number, "substitution", pendingMemberPosition)) {
+      showDuplicatePlayerAlert(number);
+      return;
+    }
+  }
+
+  if (pendingMemberSelectMode === "substitution") {
+    if (isPlayerAlreadyOnCourt(number, "substitution", pendingSubstitutionPosition)) {
+      showDuplicatePlayerAlert(number);
+      return;
+    }
+  }
+
+  originalSelectMemberForPositionDuplicateGuard(number);
+};
+selectMemberForPosition = window.selectMemberForPosition;
+
+const originalCompleteSubstitutionDuplicateGuard = window.completeSubstitution || completeSubstitution;
+window.completeSubstitution = function (inNumber) {
+  if (isPlayerAlreadyOnCourt(inNumber, "substitution", pendingSubstitutionPosition)) {
+    showDuplicatePlayerAlert(inNumber);
+    return;
+  }
+
+  originalCompleteSubstitutionDuplicateGuard(inNumber);
+};
+completeSubstitution = window.completeSubstitution;
+
+// 選択リスト上でも、すでにコート内にいる選手はわかるように表示する
+const originalOpenMemberSelectModalDuplicateGuard = window.openMemberSelectModal || openMemberSelectModal;
+window.openMemberSelectModal = function (pos, mode = "starter", reasonData = null) {
+  originalOpenMemberSelectModalDuplicateGuard(pos, mode, reasonData);
+
+  const list = document.getElementById("memberSelectList");
+  if (!list) return;
+
+  const checkMode = mode === "starter" ? "starter" : "substitution";
+
+  list.querySelectorAll(".member-option").forEach(btn => {
+    const text = btn.textContent || "";
+    const match = text.match(/#(\S+)/);
+    if (!match) return;
+
+    const number = match[1];
+    if (isPlayerAlreadyOnCourt(number, checkMode, pos)) {
+      btn.style.opacity = "0.45";
+      btn.style.background = "#f1f1f1";
+      btn.title = "すでにコート内にいます";
+    }
+  });
+};
+openMemberSelectModal = window.openMemberSelectModal;
+</script>
+
 </body>
 </html>

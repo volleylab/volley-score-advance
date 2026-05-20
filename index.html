@@ -1109,88 +1109,84 @@ textarea {
 
 
 
-.court-grid{
-  position:relative;
-  border:2px solid #d7e8f5;
-  border-radius:18px;
-  overflow:hidden;
-  background:linear-gradient(180deg,#dff1fb 0%, #c9e6f6 100%);
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.35);
-}
 
-.court-grid::before{
-  content:"ネット";
-  position:absolute;
-  top:6px;
-  left:50%;
-  transform:translateX(-50%);
-  background:#23364d;
+.court-grid{
+  --court-bg:#86cfe8;
+  --cell-bg:#f7dfd2;
+  --line:#ffffff;
+  --ink:#050505;
+  position:relative;
+  overflow:visible;
+  background:var(--court-bg);
+  padding:12px 10px 26px;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+.court-net{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 6px;
   color:white;
   font-size:12px;
   font-weight:900;
-  padding:3px 10px;
-  border-radius:999px;
-  z-index:3;
 }
-
-.court-grid::after{
+.court-net::before,.court-net::after{
   content:"";
-  position:absolute;
-  top:44px;
-  left:0;
-  width:100%;
   height:3px;
-  background:white;
-  opacity:0.9;
+  background:rgba(255,255,255,.95);
+  flex:1;
 }
-
-.court-row{
+.court-board{
   display:grid;
-  grid-template-columns:1fr 1fr 1fr;
+  grid-template-columns:repeat(3,1fr);
+  grid-template-rows:repeat(2,1fr);
+  border:4px solid var(--line);
+  background:var(--line);
+  gap:4px;
 }
-
-.court-row:first-child{
-  border-bottom:2px solid rgba(255,255,255,0.8);
-  padding-top:26px;
-}
-
 .player-cell{
-  aspect-ratio:1.3;
+  position:relative;
+  aspect-ratio:1.12;
   border:none;
-  border-right:2px solid rgba(255,255,255,0.65);
-  background:transparent;
-  font-size:24px;
-  font-weight:900;
-  color:#18324b;
+  border-radius:0;
+  background:var(--cell-bg);
+  color:var(--ink);
+  font-size:42px;
+  font-weight:1000;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:transform .28s ease, background .22s ease, box-shadow .22s ease;
 }
-
-.player-cell:last-child{
-  border-right:none;
-}
-
+.player-cell span{display:block;transition:transform .28s ease;}
+.player-cell.rotating span{transform:scale(1.16);}
 .setter-cell{
-  background:rgba(255,219,77,0.9);
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.9);
-  border-radius:12px;
+  background:#fff200;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.55);
 }
-
-.score-court-wrap{
-  margin:14px 0;
+.score-court-wrap{margin:14px 0;}
+.score-court-title{text-align:center;font-weight:900;margin-bottom:8px;}
+.mini-court{max-width:330px;margin:0 auto;}
+.mini-court .player-cell{font-size:38px;}
+.serve-chip{
+  display:none;
+  position:absolute;
+  right:10px;
+  bottom:4px;
+  color:white;
+  font-size:22px;
+  font-weight:1000;
+  font-style:italic;
+  text-shadow:0 2px 8px rgba(0,0,0,.24);
 }
-
-.score-court-title{
-  text-align:center;
-  font-weight:900;
-  margin-bottom:8px;
-}
-
-.mini-court{
-  max-width:280px;
-  margin:0 auto;
-}
-
-.mini-player{
-  font-size:18px;
+.court-grid.has-serve .serve-chip{display:block;}
+@media (max-width:480px){
+  .mini-court{max-width:310px;}
+  .player-cell{font-size:38px;}
+  .mini-court .player-cell{font-size:34px;}
 }
 </style>
 </head>
@@ -1280,7 +1276,7 @@ textarea {
         <div class="setting-grid">
           <div>
             <label>HOME開始ローテ</label>
-            <select id="startHomeRotation" onchange="markDirty(); updateSetterHighlight()">
+            <select id="startHomeRotation" onchange="markDirty(); syncHomeRotationFromSelector(); updateLiveCourt()">
               <option value="1">S1</option>
               <option value="2">S6</option>
               <option value="3">S5</option>
@@ -1318,32 +1314,33 @@ textarea {
     </div>
 
     
-<div class="collapse open" id="starterMemberBox">
-  <div class="collapse-head">
+<div class="collapse" id="starterMemberBox">
+  <div class="collapse-head" onclick="toggleStarterMemberBox()">
     <span>HOMEスタートメンバー</span>
+    <span id="starterMemberArrow">▼</span>
   </div>
 
-  <div class="collapse-body" style="display:block;">
+  <div class="collapse-body">
     <div style="font-size:13px; font-weight:800; color:#555; margin-bottom:10px;">
       コートをタッチして背番号を入力（未入力は「ー」）
     </div>
 
-    <div class="court-grid" id="starterCourt">
-      <div class="court-row">
-        <button class="player-cell" onclick="editPlayerNumber('lf')"><span id="num-lf">ー</span></button>
-        <button class="player-cell setter-cell" onclick="editPlayerNumber('cf')"><span id="num-cf">ー</span></button>
-        <button class="player-cell" onclick="editPlayerNumber('rf')"><span id="num-rf">ー</span></button>
-      </div>
-      <div class="court-row">
-        <button class="player-cell" onclick="editPlayerNumber('lb')"><span id="num-lb">ー</span></button>
-        <button class="player-cell" onclick="editPlayerNumber('cb')"><span id="num-cb">ー</span></button>
-        <button class="player-cell" onclick="editPlayerNumber('rb')"><span id="num-rb">ー</span></button>
-      </div>
-    </div>
+    
+<div class="court-grid" id="starterCourt">
+  <div class="court-net">ネット</div>
+  <div class="court-board">
+    <button class="player-cell" data-pos="lf" onclick="editPlayerNumber('lf')"><span id="num-lf">ー</span></button>
+    <button class="player-cell" data-pos="cf" onclick="editPlayerNumber('cf')"><span id="num-cf">ー</span></button>
+    <button class="player-cell" data-pos="rf" onclick="editPlayerNumber('rf')"><span id="num-rf">ー</span></button>
+    <button class="player-cell" data-pos="lb" onclick="editPlayerNumber('lb')"><span id="num-lb">ー</span></button>
+    <button class="player-cell" data-pos="cb" onclick="editPlayerNumber('cb')"><span id="num-cb">ー</span></button>
+    <button class="player-cell" data-pos="rb" onclick="editPlayerNumber('rb')"><span id="num-rb">ー</span></button>
+  </div>
+</div>
 
-    <div style="margin-top:10px; font-size:12px; color:#666; font-weight:700;">
-      黄色＝セッター位置（ローテ判別）
-    </div>
+<div style="margin-top:10px; font-size:12px; color:#666; font-weight:700;">
+  黄色＝セッター位置（HOME開始ローテと連動）
+</div>
   </div>
 </div>
 
@@ -1381,17 +1378,18 @@ textarea {
     
 <div class="score-court-wrap">
   <div class="score-court-title">現在のコート配置</div>
-  <div class="court-grid mini-court">
-    <div class="court-row">
-      <button class="player-cell mini-player"><span id="live-lf">ー</span></button>
-      <button class="player-cell setter-cell mini-player"><span id="live-cf">ー</span></button>
-      <button class="player-cell mini-player"><span id="live-rf">ー</span></button>
+  
+<div class="court-grid mini-court" id="liveCourt">
+    <div class="court-net">ネット</div>
+    <div class="court-board">
+      <button class="player-cell" data-pos="lf"><span id="live-lf">ー</span></button>
+      <button class="player-cell" data-pos="cf"><span id="live-cf">ー</span></button>
+      <button class="player-cell" data-pos="rf"><span id="live-rf">ー</span></button>
+      <button class="player-cell" data-pos="lb"><span id="live-lb">ー</span></button>
+      <button class="player-cell" data-pos="cb"><span id="live-cb">ー</span></button>
+      <button class="player-cell" data-pos="rb"><span id="live-rb">ー</span></button>
     </div>
-    <div class="court-row">
-      <button class="player-cell mini-player"><span id="live-lb">ー</span></button>
-      <button class="player-cell mini-player"><span id="live-cb">ー</span></button>
-      <button class="player-cell mini-player"><span id="live-rb">ー</span></button>
-    </div>
+    <div class="serve-chip">Serve</div>
   </div>
 </div>
 
@@ -1558,6 +1556,7 @@ let servingTeam = null;
 let history = [];
 let pendingScoreTeam = null;
 
+/* 内部値の対応：1=S1, 2=S6, 3=S5, 4=S4, 5=S3, 6=S2 */
 const rotationMap = {
   1: "S1",
   2: "S6",
@@ -1574,14 +1573,60 @@ const scoringReasons = ["アタック決定", "サービスエース", "ブロ�
 const mistakeReasons = ["アタック失点", "サーブミス", "その他のミス"];
 const allReasons = [...scoringReasons, ...mistakeReasons];
 
-const starterPlayers = {
-  lf:"ー",
-  cf:"ー",
-  rf:"ー",
-  lb:"ー",
-  cb:"ー",
-  rb:"ー"
+const starterPlayers = { lf:"ー", cf:"ー", rf:"ー", lb:"ー", cb:"ー", rb:"ー" };
+const setterPositionByRotation = {
+  "1":"rb", // value 1 = S1: 右下
+  "2":"cb", // value 2 = S6: 中央下
+  "3":"lb", // value 3 = S5: 左下
+  "4":"lf", // value 4 = S4: 左上
+  "5":"cf", // value 5 = S3: 中央上
+  "6":"rf"  // value 6 = S2: 右上
 };
+
+function getSetterPositionFromRotation(rotation){
+  return setterPositionByRotation[String(rotation)] || "rb";
+}
+
+function getStarterSetterPosition(){
+  const rotation = document.getElementById("startHomeRotation")?.value || "1";
+  return getSetterPositionFromRotation(rotation);
+}
+
+function getLiveSetterPosition(){
+  return getSetterPositionFromRotation(homeRotation);
+}
+
+function updateSetterHighlight(){
+  const starterSetterPos = getStarterSetterPosition();
+  const liveSetterPos = getLiveSetterPosition();
+
+  document.querySelectorAll("#starterCourt .player-cell").forEach(el => {
+    el.classList.toggle("setter-cell", el.dataset.pos === starterSetterPos);
+  });
+
+  document.querySelectorAll("#liveCourt .player-cell").forEach(el => {
+    el.classList.toggle("setter-cell", el.dataset.pos === liveSetterPos);
+  });
+}
+
+function updateServeChip(){
+  const starterCourt = document.getElementById("starterCourt");
+  const liveCourt = document.getElementById("liveCourt");
+  if(starterCourt) starterCourt.classList.remove("has-serve");
+  if(liveCourt) liveCourt.classList.toggle("has-serve", servingTeam === "home");
+}
+
+function animateCourtRotation(){
+  document.querySelectorAll(".player-cell").forEach(el => {
+    el.classList.remove("rotating");
+    void el.offsetWidth;
+    el.classList.add("rotating");
+  });
+  window.setTimeout(() => {
+    document.querySelectorAll(".player-cell").forEach(el => el.classList.remove("rotating"));
+  }, 320);
+}
+
 
 function editPlayerNumber(pos){
   const current = starterPlayers[pos] || "ー";
@@ -1599,46 +1644,56 @@ function editPlayerNumber(pos){
 }
 
 
-function updateSetterHighlight(){
-  const rotation = document.getElementById("startHomeRotation")?.value || "1";
 
-  const map = {
-    "1":"rb",
-    "2":"cf",
-    "3":"lb",
-    "4":"lf",
-    "5":"cb",
-    "6":"rf"
-  };
 
-  document.querySelectorAll('.player-cell').forEach(el=>{
-    el.classList.remove('setter-cell');
-  });
 
-  const target = map[rotation];
-  if(!target) return;
 
-  const ids = [
-    "num-"+target,
-    "live-"+target
-  ];
+const rotationStepByHomeRotation = {
+  "1":0, // S1
+  "2":1, // S6
+  "3":2, // S5
+  "4":3, // S4
+  "5":4, // S3
+  "6":5  // S2
+};
 
-  ids.forEach(id=>{
-    const span = document.getElementById(id);
-    if(span && span.parentElement){
-      span.parentElement.classList.add('setter-cell');
-    }
-  });
+const nextRotationPosition = {
+  "rb":"cb",
+  "cb":"lb",
+  "lb":"lf",
+  "lf":"cf",
+  "cf":"rf",
+  "rf":"rb"
+};
+
+function getRotatedPlayersForCurrentRotation(){
+  const result = {...starterPlayers};
+  const steps = rotationStepByHomeRotation[String(homeRotation)] || 0;
+
+  for(let step=0; step<steps; step++){
+    const previous = {...result};
+    Object.keys(previous).forEach(pos => {
+      result[nextRotationPosition[pos]] = previous[pos];
+    });
+  }
+
+  return result;
 }
 
 
 function updateLiveCourt(){
+  const livePlayers = getRotatedPlayersForCurrentRotation();
+
   Object.keys(starterPlayers).forEach(pos => {
+    const starter = document.getElementById("num-" + pos);
     const live = document.getElementById("live-" + pos);
-    if(live){
-      live.textContent = starterPlayers[pos];
-    }
+
+    if(starter) starter.textContent = starterPlayers[pos] || "ー";
+    if(live) live.textContent = livePlayers[pos] || "ー";
   });
+
+  updateSetterHighlight();
+  updateServeChip();
 }
 
 
@@ -1667,6 +1722,21 @@ function openMatchInfo() {
 function closeMatchInfo() {
   document.getElementById("matchInfoBox").classList.remove("open");
   document.getElementById("matchInfoArrow").textContent = "▼";
+}
+
+
+
+function syncHomeRotationFromSelector(){
+  const homeStart = document.getElementById("startHomeRotation")?.value || "1";
+  homeRotation = homeStart === "-" ? "-" : Number(homeStart);
+}
+
+
+function toggleStarterMemberBox() {
+  const box = document.getElementById("starterMemberBox");
+  box.classList.toggle("open");
+  document.getElementById("starterMemberArrow").textContent =
+    box.classList.contains("open") ? "▲" : "▼";
 }
 
 function toggleRotationInfo() {
@@ -1880,7 +1950,6 @@ function startMatch() {
   markDirty();
   closeRotationInfo();
   updateLiveCourt();
-  updateSetterHighlight();
   updateDisplay();
 }
 
@@ -1923,6 +1992,7 @@ function addPoint(team, reason = "未選択") {
   });
 
   historyView = "current";
+  if (beforeServer !== servingTeam) animateCourtRotation();
   markDirty();
   updateDisplay();
 }
@@ -2027,7 +2097,8 @@ function confirmResetMatch() {
 function resetCurrentMatch(dirty = true) {
   homeScore = 0;
   awayScore = 0;
-  homeRotation = 1;
+  const homeStart = document.getElementById("startHomeRotation")?.value || "1";
+  homeRotation = homeStart === "-" ? "-" : Number(homeStart);
   awayRotation = "-";
   servingTeam = null;
   history = history.filter(item => item.setNumber !== setNumber);
@@ -2142,6 +2213,7 @@ function updateDisplay() {
     currentRotationEl.className = "";
   }
 
+  updateLiveCourt();
   renderSetSummary();
   renderHistoryTabs();
   renderHistory();

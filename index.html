@@ -1439,6 +1439,58 @@ textarea {
   background: #f8f8f8;
 }
 
+
+/* ===== Advance v18 UI polish ===== */
+.score-box.score-pulse {
+  animation: scorePulse .34s ease;
+}
+
+@keyframes scorePulse {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12); filter: brightness(1.08); }
+  100% { transform: scale(1); }
+}
+
+.mini-court.has-serve {
+  box-shadow: 0 0 0 4px rgba(21,87,230,.22), 0 8px 22px rgba(21,87,230,.18);
+}
+
+.select-court-large.has-serve {
+  box-shadow: 0 0 0 4px rgba(21,87,230,.22), 0 10px 26px rgba(21,87,230,.18);
+}
+
+.court-grid.rotation-flash .player-cell span {
+  animation: rotatePop .34s ease;
+}
+
+@keyframes rotatePop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.fixed-actions {
+  padding: 12px 14px 14px;
+}
+
+.point-btn {
+  min-height: 66px;
+  font-size: 27px;
+  border-radius: 16px;
+  box-shadow: 0 5px 14px rgba(0,0,0,.16);
+}
+
+.sub-btn {
+  min-height: 48px;
+  border-radius: 14px;
+}
+
+.serve-label {
+  font-size: 15px;
+  padding: 8px 18px;
+  box-shadow: 0 3px 10px rgba(21,87,230,.12);
+}
+
 </style>
 </head>
 
@@ -2584,7 +2636,7 @@ function advanceAwayRotation() {
 }
 
 function undo() {
-  const currentSetHistory = history.filter(item => item.setNumber === setNumber);
+  const currentSetHistory = history.filter(item => item.setNumber === setNumber && item.eventType !== "substitution");
 
   if (
     setNumber > 1 &&
@@ -2630,7 +2682,7 @@ function undo() {
   let lastIndex = -1;
 
   for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].setNumber === setNumber) {
+    if (history[i].setNumber === setNumber && history[i].eventType !== "substitution") {
       lastIndex = i;
       break;
     }
@@ -2638,8 +2690,8 @@ function undo() {
 
   if (lastIndex >= 0) history.splice(lastIndex, 1);
 
-  const oldHistory = history.filter(item => item.setNumber === setNumber);
-  const otherHistory = history.filter(item => item.setNumber !== setNumber);
+  const oldHistory = history.filter(item => item.setNumber === setNumber && item.eventType !== "substitution");
+  const otherHistory = history.filter(item => item.setNumber !== setNumber || item.eventType === "substitution");
 
   const homeStart = document.getElementById("startHomeRotation").value;
   const awayStart = document.getElementById("startAwayRotation").value;
@@ -2652,7 +2704,7 @@ function undo() {
 
   history = [...otherHistory];
 
-  oldHistory.forEach(item => addPoint(item.scoredTeam, item.reason, { playerPosition: item.playerPosition, playerNumber: item.playerNumber }));
+  oldHistory.filter(item => item.eventType !== "substitution").forEach(item => addPoint(item.scoredTeam, item.reason, { playerPosition: item.playerPosition, playerNumber: item.playerNumber }));
 
   markDirty();
   updateDisplay();
@@ -2845,7 +2897,7 @@ function renderHistory() {
   historyDiv.innerHTML = "";
 
   const targetSetNumber = getHistoryTargetSetNumber();
-  const setHistoryItems = history.filter(item => item.setNumber === targetSetNumber);
+  const setHistoryItems = history.filter(item => item.setNumber === targetSetNumber && item.eventType !== "substitution");
 
   if (setHistoryItems.length === 0) {
     historyDiv.innerHTML = `
@@ -2961,9 +3013,9 @@ function renderStatsTabs() {
 }
 
 function getStatsItems() {
-  if (statsView === "total") return history;
-  if (statsView === "current") return history.filter(item => item.setNumber === setNumber);
-  return history.filter(item => item.setNumber === statsView);
+  if (statsView === "total") return history.filter(item => item.eventType !== "substitution");
+  if (statsView === "current") return history.filter(item => item.setNumber === setNumber && item.eventType !== "substitution");
+  return history.filter(item => item.setNumber === statsView && item.eventType !== "substitution");
 }
 
 function getStatsTitle() {
@@ -2987,7 +3039,7 @@ function renderStats() {
 
 
 function renderFlowAnalysis() {
-  const items = getStatsItems();
+  const items = getStatsItems().filter(item => item.eventType !== "substitution");
   const div = document.getElementById("graphStatsView");
   if (!div) return;
 
@@ -3510,6 +3562,7 @@ function calculateStats(items) {
   const total = { ...base };
 
   items.forEach(item => {
+    if (item.eventType === "substitution" || !item.scoredTeam) return;
     const isHomePoint = item.scoredTeam === "home";
 
     if (isHomePoint) total.pointsFor++;
@@ -3650,6 +3703,8 @@ function saveMatch(goBack = false) {
     homeStartRotation: document.getElementById("startHomeRotation").value,
     awayStartRotation: document.getElementById("startAwayRotation").value,
     startServer: document.getElementById("startServer").value,
+    starterPlayers: { ...starterPlayers },
+    activeCourtPlayers: activeCourtPlayers ? { ...activeCourtPlayers } : null,
     history
   };
 
@@ -3796,7 +3851,19 @@ function openMatch(id) {
   document.getElementById("startAwayRotation").value = match.awayStartRotation;
   document.getElementById("startServer").value = match.startServer;
 
-  history = [...match.history];
+  if (match.starterPlayers) {
+    Object.keys(starterPlayers).forEach(pos => {
+      starterPlayers[pos] = match.starterPlayers[pos] || "ー";
+    });
+  }
+
+  if (match.activeCourtPlayers) {
+    activeCourtPlayers = { ...match.activeCourtPlayers };
+  } else {
+    activeCourtPlayers = null;
+  }
+
+  history = [...(match.history || [])];
   homeScore = match.homeScore;
   awayScore = match.awayScore;
 
@@ -3832,7 +3899,9 @@ function openDeleteModal(id) {
 function createExportPayload(targetMatches, exportType = "matches") {
   return {
     app: "Volley Score Advance",
-    version: 2,
+    format: "volley-score-advance",
+    fileType: "advance-json",
+    version: 3,
     exportType,
     exportedAt: new Date().toISOString(),
     matches: targetMatches
@@ -3896,11 +3965,11 @@ function getMatchExportSequence(match) {
   return String(index >= 0 ? index + 1 : sameCard.length + 1).padStart(2, "0");
 }
 
-function getSingleMatchFileName(match, ext = "json") {
+function getSingleMatchFileName(match, ext = "advance.json") {
   return `${getMatchExportBaseName(match)}_${getMatchExportSequence(match)}.${ext}`;
 }
 
-function getSelectedMatchesFileName(selectedMatches, ext = "json") {
+function getSelectedMatchesFileName(selectedMatches, ext = "advance.json") {
   if (selectedMatches.length === 1) return getSingleMatchFileName(selectedMatches[0], ext);
 
   const bases = Array.from(new Set(selectedMatches.map(getMatchExportBaseName)));
@@ -3915,7 +3984,7 @@ function getSelectedMatchesFileName(selectedMatches, ext = "json") {
     return `${dates[0]}_${homeName}_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
   }
 
-  return `volley_score_plus_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+  return `volley_score_advance_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
 }
 
 function downloadJsonFile(data, fileName) {
@@ -3943,7 +4012,7 @@ function exportAllMatches() {
   const payload = createExportPayload(matches, "all");
   const today = yymmddFromDate(getTodayDateString());
   const homeName = sanitizeFileName(getExportHomeName(), "HOME");
-  downloadJsonFile(payload, `${today}_${homeName}_all_${String(matches.length).padStart(2, "0")}matches.json`);
+  downloadJsonFile(payload, `${today}_${homeName}_all_${String(matches.length).padStart(2, "0")}matches.advance.json`);
 }
 
 function exportSelectedMatches() {
@@ -3978,11 +4047,74 @@ function openImportFile() {
   input.click();
 }
 
+
+function detectImportSource(importedData) {
+  const app = String(importedData?.app || "").toLowerCase();
+  const format = String(importedData?.format || "").toLowerCase();
+
+  if (format.includes("advance") || app.includes("advance") || importedData?.fileType === "advance-json") {
+    return "advance";
+  }
+
+  if (app.includes("plus") || importedData?.fileType === "plus-json") {
+    return "plus";
+  }
+
+  return "unknown";
+}
+
+function normalizePlusMatchToAdvance(match) {
+  const normalizedHistory = (match.history || []).map(item => ({
+    ...item,
+    eventType: item.eventType || "score",
+    playerPosition: item.playerPosition || null,
+    playerNumber: item.playerNumber || null
+  }));
+
+  return {
+    ...match,
+    appSource: match.appSource || "Volley Score Plus",
+    advanceImportedFrom: "plus",
+    starterPlayers: match.starterPlayers || { lf:"ー", cf:"ー", rf:"ー", lb:"ー", cb:"ー", rb:"ー" },
+    activeCourtPlayers: match.activeCourtPlayers || null,
+    history: normalizedHistory,
+    setResults: match.setResults || [],
+    setCount: match.setCount || getSetCount(match.setResults || []),
+    homeStartRotation: match.homeStartRotation || match.startHomeRotation || "1",
+    awayStartRotation: match.awayStartRotation || match.startAwayRotation || "-",
+    startServer: match.startServer || "home"
+  };
+}
+
+function normalizeAdvanceMatch(match) {
+  return {
+    ...match,
+    starterPlayers: match.starterPlayers || { lf:"ー", cf:"ー", rf:"ー", lb:"ー", cb:"ー", rb:"ー" },
+    activeCourtPlayers: match.activeCourtPlayers || null,
+    history: (match.history || []).map(item => ({
+      ...item,
+      eventType: item.eventType || "score"
+    })),
+    setResults: match.setResults || [],
+    setCount: match.setCount || getSetCount(match.setResults || [])
+  };
+}
+
 function normalizeImportedMatches(importedData) {
-  if (Array.isArray(importedData)) return importedData;
-  if (importedData && Array.isArray(importedData.matches)) return importedData.matches;
-  if (importedData && importedData.history) return [importedData];
-  return [];
+  const source = detectImportSource(importedData);
+
+  let rawMatches = [];
+  if (Array.isArray(importedData)) rawMatches = importedData;
+  else if (importedData && Array.isArray(importedData.matches)) rawMatches = importedData.matches;
+  else if (importedData && importedData.history) rawMatches = [importedData];
+
+  if (!rawMatches.length) return [];
+
+  if (source === "plus") {
+    return rawMatches.map(normalizePlusMatchToAdvance);
+  }
+
+  return rawMatches.map(normalizeAdvanceMatch);
 }
 
 function makeImportedMatchCopy(match) {
@@ -3996,7 +4128,12 @@ function makeImportedMatchCopy(match) {
     savedAt: match.savedAt || new Date().toLocaleString("ja-JP"),
     setResults: match.setResults || [],
     setCount: match.setCount || getSetCount(match.setResults || []),
-    history: match.history || []
+    starterPlayers: match.starterPlayers || { lf:"ー", cf:"ー", rf:"ー", lb:"ー", cb:"ー", rb:"ー" },
+    activeCourtPlayers: match.activeCourtPlayers || null,
+    history: (match.history || []).map(item => ({
+      ...item,
+      eventType: item.eventType || "score"
+    }))
   };
 }
 
@@ -4026,7 +4163,7 @@ function importMatchesFromFile(event) {
       alert(`${copiedMatches.length}試合を読み込みました`);
     } catch (error) {
       console.error(error);
-      alert("読み込みに失敗しました。Volley Score Advanceで書き出したJSONファイルを選んでください。");
+      alert("読み込みに失敗しました。AdvanceまたはPlusで書き出したJSONファイルを選んでください。");
     }
   };
 
@@ -6135,6 +6272,180 @@ window.openMemberSelectModal = function (pos, mode = "starter", reasonData = nul
   });
 };
 openMemberSelectModal = window.openMemberSelectModal;
+</script>
+
+
+<script>
+/* ===== Advance v18 UI polish + unset-player scoring fix ===== */
+
+function pulseScoreBox(team) {
+  const box = document.getElementById(team === "home" ? "homeScoreBox" : "awayScoreBox");
+  if (!box) return;
+  box.classList.remove("score-pulse");
+  void box.offsetWidth;
+  box.classList.add("score-pulse");
+  window.setTimeout(() => box.classList.remove("score-pulse"), 380);
+}
+
+const originalAddPointV18 = window.addPoint || addPoint;
+window.addPoint = function (team, reason = "未選択", playerInfo = null) {
+  const beforeHome = homeScore;
+  const beforeAway = awayScore;
+
+  originalAddPointV18(team, reason, playerInfo);
+
+  if (team === "home" && homeScore !== beforeHome) pulseScoreBox("home");
+  if (team === "away" && awayScore !== beforeAway) pulseScoreBox("away");
+};
+addPoint = window.addPoint;
+
+const originalAnimateCourtRotationV18 = window.animateCourtRotation || animateCourtRotation;
+window.animateCourtRotation = function () {
+  originalAnimateCourtRotationV18();
+
+  ["liveCourt", "selectCourt"].forEach(id => {
+    const court = document.getElementById(id);
+    if (!court) return;
+    court.classList.remove("rotation-flash");
+    void court.offsetWidth;
+    court.classList.add("rotation-flash");
+    window.setTimeout(() => court.classList.remove("rotation-flash"), 380);
+  });
+};
+animateCourtRotation = window.animateCourtRotation;
+
+// 「ー」の場所で得点者を選んだ時に、選んだ選手をその位置に入れて、そのまま得点も入れる
+const originalSelectMemberForPositionV18 = window.selectMemberForPosition || selectMemberForPosition;
+window.selectMemberForPosition = function (number) {
+  if (pendingMemberSelectMode === "score" && pendingReasonData && pendingMemberPosition) {
+    if (typeof isPlayerAlreadyOnCourt === "function" && isPlayerAlreadyOnCourt(number, "substitution", pendingMemberPosition)) {
+      if (typeof showDuplicatePlayerAlert === "function") showDuplicatePlayerAlert(number);
+      return;
+    }
+
+    if (!activeCourtPlayers && typeof getBaseRotatedPlayersForCurrentRotation === "function") {
+      activeCourtPlayers = getBaseRotatedPlayersForCurrentRotation();
+    }
+
+    if (activeCourtPlayers) {
+      activeCourtPlayers[pendingMemberPosition] = number || "ー";
+    }
+
+    addPointWithPlayer(
+      pendingReasonData.team,
+      pendingReasonData.reason,
+      pendingMemberPosition,
+      number || "ー"
+    );
+
+    closeMemberSelectModal();
+    updateLiveCourt();
+    return;
+  }
+
+  originalSelectMemberForPositionV18(number);
+};
+selectMemberForPosition = window.selectMemberForPosition;
+
+// 全画面コートで未設定を押した時、pendingReasonDataを消さずにメンバー選択へ渡す
+window.selectPlayerFromCourt = function (pos) {
+  if (!pendingReasonData) return;
+
+  const reasonData = { ...pendingReasonData };
+  const currentNumber = getCurrentPlayerNumberAtPosition(pos);
+
+  if (currentNumber && currentNumber !== "ー") {
+    addPointWithPlayer(
+      reasonData.team,
+      reasonData.reason,
+      pos,
+      currentNumber
+    );
+    closePlayerCourtSelectModal();
+    return;
+  }
+
+  const modal = document.getElementById("playerCourtSelectModal");
+  if (modal) modal.style.display = "none";
+
+  openMemberSelectModal(pos, "score", reasonData);
+};
+
+// Serve表示の視認性を随時反映
+const originalUpdateServeChipV18 = window.updateServeChip || updateServeChip;
+window.updateServeChip = function () {
+  originalUpdateServeChipV18();
+  ["liveCourt", "selectCourt"].forEach(id => {
+    const court = document.getElementById(id);
+    if (court) court.classList.toggle("has-serve", servingTeam === "home");
+  });
+};
+updateServeChip = window.updateServeChip;
+</script>
+
+
+<script>
+/* ===== Advance v19 sanity fixes ===== */
+// 保存済み試合を開いた直後もコート表示を正しく復元
+const originalOpenMatchV19 = window.openMatch || openMatch;
+window.openMatch = function(id) {
+  originalOpenMatchV19(id);
+  updateLiveCourt();
+  renderHistory();
+  renderStats();
+};
+openMatch = window.openMatch;
+
+// 新規入力では前試合の交代状態を持ち越さない
+const originalNewMatchV19 = window.newMatch || newMatch;
+window.newMatch = function() {
+  activeCourtPlayers = null;
+  originalNewMatchV19();
+  updateLiveCourt();
+};
+newMatch = window.newMatch;
+
+// 統計は交代ログを除外
+const originalGetStatsItemsV19 = window.getStatsItems || getStatsItems;
+window.getStatsItems = function() {
+  return originalGetStatsItemsV19().filter(item => item.eventType !== "substitution");
+};
+getStatsItems = window.getStatsItems;
+</script>
+
+
+<script>
+/* ===== Advance v20 JSON compatibility ===== */
+window.createExportPayload = function(targetMatches, exportType = "matches") {
+  return {
+    app: "Volley Score Advance",
+    format: "volley-score-advance",
+    fileType: "advance-json",
+    version: 3,
+    exportType,
+    exportedAt: new Date().toISOString(),
+    matches: targetMatches
+  };
+};
+createExportPayload = window.createExportPayload;
+
+window.normalizeImportedMatches = function(importedData) {
+  const app = String(importedData?.app || "").toLowerCase();
+  const format = String(importedData?.format || "").toLowerCase();
+  const fileType = String(importedData?.fileType || "").toLowerCase();
+
+  let rawMatches = [];
+  if (Array.isArray(importedData)) rawMatches = importedData;
+  else if (importedData && Array.isArray(importedData.matches)) rawMatches = importedData.matches;
+  else if (importedData && importedData.history) rawMatches = [importedData];
+
+  const isPlus = app.includes("plus") || fileType.includes("plus");
+  return rawMatches.map(match => {
+    const base = isPlus ? normalizePlusMatchToAdvance(match) : normalizeAdvanceMatch(match);
+    return base;
+  });
+};
+normalizeImportedMatches = window.normalizeImportedMatches;
 </script>
 
 </body>

@@ -1491,6 +1491,114 @@ textarea {
   box-shadow: 0 3px 10px rgba(21,87,230,.12);
 }
 
+
+/* ===== Advance v21 modal/court + compact stats ===== */
+.full-court-modal {
+  padding: 10px !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.full-court-modal .modal {
+  width: min(94vw, 430px) !important;
+  max-width: 430px !important;
+  padding: 18px 14px !important;
+  border-radius: 24px !important;
+  overflow: hidden;
+}
+
+.select-court-large {
+  width: 100% !important;
+  max-width: 350px !important;
+  margin: 12px auto 14px !important;
+  box-sizing: border-box !important;
+  padding: 10px 8px 22px !important;
+  overflow: hidden !important;
+}
+
+.select-court-large .court-board {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  gap: 3px !important;
+  border-width: 3px !important;
+}
+
+.select-court-large .player-cell {
+  min-height: 0 !important;
+  aspect-ratio: 1.08 !important;
+  font-size: clamp(26px, 8vw, 38px) !important;
+  box-sizing: border-box !important;
+}
+
+.select-court-large .setter-cell {
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.75) !important;
+}
+
+.player-select-title-main {
+  font-size: 22px;
+  font-weight: 1000;
+  margin-bottom: 8px;
+}
+
+.reason-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 15px;
+  font-weight: 1000;
+}
+
+.reason-pill.score {
+  background: #eef5ff;
+  color: #1557e6;
+}
+
+.reason-pill.error {
+  background: #fff1f4;
+  color: #e91f26;
+}
+
+.select-court-help {
+  font-size: 12px !important;
+  margin-top: -4px;
+}
+
+.player-stats-table.compact th,
+.player-stats-table.compact td {
+  padding: 7px 3px;
+  font-size: 12px;
+}
+
+.player-stats-table.compact th.group-score {
+  background: #eef5ff;
+  color: #1557e6;
+}
+
+.player-stats-table.compact th.group-error {
+  background: #fff1f4;
+  color: #e91f26;
+}
+
+.player-stats-table.compact .score-cell {
+  background: #fbfdff;
+}
+
+.player-stats-table.compact .error-cell {
+  background: #fffafb;
+}
+
+.player-stats-note {
+  font-size: 11px;
+  color: #666;
+  font-weight: 800;
+  margin: 8px 2px 0;
+  line-height: 1.5;
+}
+
+.substitution-row {
+  background: #fafafa;
+}
+
 </style>
 </head>
 
@@ -6446,6 +6554,574 @@ window.normalizeImportedMatches = function(importedData) {
   });
 };
 normalizeImportedMatches = window.normalizeImportedMatches;
+</script>
+
+
+<script>
+/* ===== Advance v21 fixes: integrated substitution history, modal width, compact player stats ===== */
+
+function getReasonTypeClass(reason) {
+  return ["アタック失点", "サーブミス", "その他のミス"].includes(reason) ? "error" : "score";
+}
+
+function renderHistoryRowForScore(item) {
+  const row = document.createElement("div");
+  row.className = "history-row";
+
+  const badgeClass = item.scoredTeam === "home" ? "home-bg" : "away-bg";
+  const badgeText = item.scoredTeam === "home" ? "HOME" : "AWAY";
+
+  const homeRot = rotationMap[item.homeRotation] || "ー";
+  const awayRot = rotationMap[item.awayRotation] || "ー";
+
+  const homeScoreClass = item.scoredTeam === "home" ? "home-text" : "gray-text";
+  const awayScoreClass = item.scoredTeam === "away" ? "away-text" : "gray-text";
+  const isScoringReason = scoringReasons.includes(item.reason);
+
+  let reasonClass = "gray-text";
+  if (isScoringReason) {
+    reasonClass = item.scoredTeam === "home" ? "home-text" : "away-text";
+  } else if (mistakeReasons.includes(item.reason)) {
+    reasonClass = item.scoredTeam === "home" ? "away-text" : "home-text";
+  }
+
+  row.innerHTML = `
+    <div class="badge ${badgeClass}">${badgeText}</div>
+    <div class="score-history">
+      <span class="${homeScoreClass}">${item.homeScore}</span>
+      <span>-</span>
+      <span class="${awayScoreClass}">${item.awayScore}</span>
+      <div class="reason-text ${reasonClass}">
+        ${item.reason || ""}${item.playerNumber ? `<span class="player-tag">#${item.playerNumber}</span>` : ""}
+      </div>
+    </div>
+    <div class="history-rotation">
+      <span class="home-text">${homeRot}</span>/<span class="away-text">${awayRot}</span>
+    </div>
+  `;
+
+  return row;
+}
+
+function renderHistoryRowForSubstitution(item) {
+  const row = document.createElement("div");
+  row.className = "history-row substitution-row";
+
+  row.innerHTML = `
+    <div class="badge" style="background:#666;">交代</div>
+    <div class="score-history">
+      <span class="gray-text">${item.homeScore}</span>
+      <span>-</span>
+      <span class="gray-text">${item.awayScore}</span>
+      <div class="reason-text gray-text">
+        ${formatMemberLabel(item.outNumber)} → ${formatMemberLabel(item.inNumber)}
+      </div>
+    </div>
+    <div class="history-rotation">
+      <span class="home-text">${rotationMap[item.homeRotation] || "ー"}</span>
+    </div>
+  `;
+
+  return row;
+}
+
+window.renderHistory = function () {
+  const historyDiv = document.getElementById("history");
+  if (!historyDiv) return;
+
+  historyDiv.innerHTML = "";
+
+  const targetSetNumber = getHistoryTargetSetNumber();
+  const setItems = history
+    .filter(item => item.setNumber === targetSetNumber)
+    .map((item, index) => ({ ...item, __index: index }));
+
+  if (setItems.length === 0) {
+    historyDiv.innerHTML = `
+      <div class="history-row">
+        <div class="badge" style="background:#999;">START</div>
+        <div class="score-history">
+          <span class="gray-text">0</span>
+          <span>-</span>
+          <span class="gray-text">0</span>
+          <div class="reason-text gray-text">セット開始</div>
+        </div>
+        <div class="history-rotation">
+          <span class="gray-text">ー</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  setItems
+    .slice()
+    .reverse()
+    .forEach(item => {
+      if (item.eventType === "substitution") {
+        historyDiv.appendChild(renderHistoryRowForSubstitution(item));
+      } else {
+        historyDiv.appendChild(renderHistoryRowForScore(item));
+      }
+    });
+
+  const firstScore = setItems.find(item => item.eventType !== "substitution");
+  const startHomeRot = firstScore ? (rotationMap[firstScore.beforeHomeRotation] || "ー") : "ー";
+  const startAwayRot = firstScore ? (rotationMap[firstScore.beforeAwayRotation] || "ー") : "ー";
+
+  const startRow = document.createElement("div");
+  startRow.className = "history-row";
+  startRow.innerHTML = `
+    <div class="badge" style="background:#999;">START</div>
+    <div class="score-history">
+      <span class="gray-text">0</span>
+      <span>-</span>
+      <span class="gray-text">0</span>
+      <div class="reason-text gray-text">セット開始</div>
+    </div>
+    <div class="history-rotation">
+      <span class="home-text">${startHomeRot}</span>/<span class="away-text">${startAwayRot}</span>
+    </div>
+  `;
+  historyDiv.appendChild(startRow);
+};
+renderHistory = window.renderHistory;
+
+window.renderPlayerStats = function (items) {
+  const totals = {};
+
+  items.forEach(item => {
+    if (item.eventType === "substitution") return;
+    if (!item.playerNumber || item.playerNumber === "ー") return;
+
+    if (!totals[item.playerNumber]) {
+      totals[item.playerNumber] = {
+        number: item.playerNumber,
+        name: (homeRoster.find(p => String(p.number) === String(item.playerNumber)) || {}).name || "",
+        attack: 0,
+        serve: 0,
+        block: 0,
+        attackError: 0,
+        serveMiss: 0,
+        otherMiss: 0
+      };
+    }
+
+    const p = totals[item.playerNumber];
+
+    if (item.reason === "アタック決定") p.attack++;
+    if (item.reason === "サービスエース") p.serve++;
+    if (item.reason === "ブロック得点") p.block++;
+    if (item.reason === "アタック失点") p.attackError++;
+    if (item.reason === "サーブミス") p.serveMiss++;
+    if (item.reason === "その他のミス") p.otherMiss++;
+  });
+
+  const rows = Object.values(totals)
+    .sort((a,b) => {
+      const aTotal = a.attack + a.serve + a.block + a.attackError + a.serveMiss + a.otherMiss;
+      const bTotal = b.attack + b.serve + b.block + b.attackError + b.serveMiss + b.otherMiss;
+      return bTotal - aTotal || Number(a.number) - Number(b.number);
+    })
+    .map(p => `
+      <tr>
+        <td>#${p.number}<br><small>${escapeHtml(p.name)}</small></td>
+        <td class="score-cell">${p.attack}</td>
+        <td class="score-cell">${p.serve}</td>
+        <td class="score-cell">${p.block}</td>
+        <td class="error-cell">${p.attackError}</td>
+        <td class="error-cell">${p.serveMiss}</td>
+        <td class="error-cell">${p.otherMiss}</td>
+      </tr>
+    `).join("");
+
+  if (!rows) {
+    return `
+      <div class="point-info-placeholder">
+        選手に紐づいた記録はまだありません
+      </div>
+    `;
+  }
+
+  return `
+    <div class="point-table">
+      <div class="point-section-title">選手別</div>
+      <table class="stats-table player-stats-table compact">
+        <thead>
+          <tr>
+            <th>選手</th>
+            <th colspan="3" class="group-score">得点</th>
+            <th colspan="3" class="group-error">失点</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th class="group-score">A</th>
+            <th class="group-score">S</th>
+            <th class="group-score">B</th>
+            <th class="group-error">A</th>
+            <th class="group-error">S</th>
+            <th class="group-error">O</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="player-stats-note">
+        A=アタック / S=サーブ / B=ブロック / O=その他
+      </div>
+    </div>
+  `;
+};
+renderPlayerStats = window.renderPlayerStats;
+
+window.openPlayerCourtSelectModal = function (team, reason) {
+  pendingReasonData = { team, reason };
+
+  const title = document.getElementById("playerCourtSelectTitle");
+  const text = document.getElementById("playerCourtSelectText");
+
+  if (title) {
+    title.innerHTML = `
+      <div class="player-select-title-main">HOME選手を選択</div>
+      <span class="reason-pill ${getReasonTypeClass(reason)}">${reason}</span>
+    `;
+  }
+
+  if (text) {
+    text.textContent = "";
+    text.style.display = "none";
+  }
+
+  renderSelectCourt();
+
+  const modal = document.getElementById("playerCourtSelectModal");
+  if (modal) modal.style.display = "flex";
+};
+openPlayerCourtSelectModal = window.openPlayerCourtSelectModal;
+
+// 念のため、以前の交代ログprepend型renderHistory上書きを無効化した後の表示を更新
+setTimeout(() => {
+  renderHistory();
+  renderStats();
+}, 0);
+</script>
+
+
+<script>
+/* ===== Advance v22 stable undo ===== */
+
+function clonePlayersForUndo(players) {
+  return {
+    lf: players?.lf || "ー",
+    cf: players?.cf || "ー",
+    rf: players?.rf || "ー",
+    lb: players?.lb || "ー",
+    cb: players?.cb || "ー",
+    rb: players?.rb || "ー"
+  };
+}
+
+function rotatePlayersOnceForUndo(players) {
+  const previous = clonePlayersForUndo(players);
+  Object.keys(previous).forEach(pos => {
+    players[nextRotationPosition[pos]] = previous[pos];
+  });
+}
+
+function buildPlayersFromStarterForRotationForUndo(rotation) {
+  const players = clonePlayersForUndo(starterPlayers);
+  const steps = rotationStepByHomeRotation[String(rotation)] || 0;
+
+  for (let i = 0; i < steps; i++) {
+    rotatePlayersOnceForUndo(players);
+  }
+
+  return players;
+}
+
+function recalcCurrentSetStateFromHistory() {
+  const homeStartValue = document.getElementById("startHomeRotation")?.value || "1";
+  const awayStartValue = document.getElementById("startAwayRotation")?.value || "-";
+  const startServerValue = document.getElementById("startServer")?.value || "home";
+
+  let calcHomeScore = 0;
+  let calcAwayScore = 0;
+  let calcHomeRotation = homeStartValue === "-" ? "-" : Number(homeStartValue);
+  let calcAwayRotation = awayStartValue === "-" ? "-" : Number(awayStartValue);
+  let calcServer = startServerValue;
+  let calcPlayers = buildPlayersFromStarterForRotationForUndo(calcHomeRotation);
+
+  const currentItems = history.filter(item => item.setNumber === setNumber);
+
+  currentItems.forEach(item => {
+    if (item.eventType === "substitution") {
+      item.homeScore = calcHomeScore;
+      item.awayScore = calcAwayScore;
+      item.homeRotation = calcHomeRotation;
+      item.awayRotation = calcAwayRotation;
+      item.server = calcServer;
+
+      if (item.playerPosition) {
+        calcPlayers[item.playerPosition] = item.inNumber || "ー";
+      }
+      return;
+    }
+
+    item.beforeServer = calcServer;
+    item.beforeHomeRotation = calcHomeRotation;
+    item.beforeAwayRotation = calcAwayRotation;
+
+    if (item.scoredTeam === "home") {
+      calcHomeScore++;
+      if (calcServer === "away") {
+        if (calcHomeRotation !== "-") {
+          calcHomeRotation++;
+          if (calcHomeRotation > 6) calcHomeRotation = 1;
+        }
+        rotatePlayersOnceForUndo(calcPlayers);
+        calcServer = "home";
+      }
+    } else if (item.scoredTeam === "away") {
+      calcAwayScore++;
+      if (calcServer === "home") {
+        if (calcAwayRotation !== "-") {
+          calcAwayRotation++;
+          if (calcAwayRotation > 6) calcAwayRotation = 1;
+        }
+        calcServer = "away";
+      }
+    }
+
+    item.homeScore = calcHomeScore;
+    item.awayScore = calcAwayScore;
+    item.homeRotation = calcHomeRotation;
+    item.awayRotation = calcAwayRotation;
+    item.server = calcServer;
+  });
+
+  homeScore = calcHomeScore;
+  awayScore = calcAwayScore;
+  homeRotation = calcHomeRotation;
+  awayRotation = calcAwayRotation;
+  servingTeam = currentItems.length ? calcServer : null;
+  activeCourtPlayers = currentItems.length ? clonePlayersForUndo(calcPlayers) : null;
+}
+
+window.undo = function () {
+  const currentScoreHistory = history.filter(
+    item => item.setNumber === setNumber && item.eventType !== "substitution"
+  );
+
+  if (
+    setNumber > 1 &&
+    homeScore === 0 &&
+    awayScore === 0 &&
+    currentScoreHistory.length === 0
+  ) {
+    const prevSetNumber = setNumber - 1;
+    const prevResult = setResults.find(s => s.setNumber === prevSetNumber);
+
+    if (prevResult) {
+      const ok = confirm(
+        `前のセットに戻しますか？\nSET${prevSetNumber} ${prevResult.homeScore}-${prevResult.awayScore} に戻ります。`
+      );
+
+      if (!ok) return;
+
+      setNumber = prevSetNumber;
+      setResults = setResults.filter(s => s.setNumber !== prevSetNumber);
+
+      const prevScoreHistory = history.filter(
+        item => item.setNumber === prevSetNumber && item.eventType !== "substitution"
+      );
+
+      homeScore = prevResult.homeScore;
+      awayScore = prevResult.awayScore;
+
+      if (prevScoreHistory.length > 0) {
+        const last = prevScoreHistory[prevScoreHistory.length - 1];
+        homeRotation = last.homeRotation;
+        awayRotation = last.awayRotation;
+        servingTeam = last.server;
+      }
+
+      recalcCurrentSetStateFromHistory();
+      statsView = "current";
+      markDirty();
+      updateLiveCourt();
+      updateDisplay();
+    }
+
+    return;
+  }
+
+  if (currentScoreHistory.length === 0) return;
+
+  let lastScoreIndex = -1;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].setNumber === setNumber && history[i].eventType !== "substitution") {
+      lastScoreIndex = i;
+      break;
+    }
+  }
+
+  if (lastScoreIndex < 0) return;
+
+  history.splice(lastScoreIndex, 1);
+
+  recalcCurrentSetStateFromHistory();
+
+  historyView = "current";
+  statsView = "current";
+  markDirty();
+  updateLiveCourt();
+  updateDisplay();
+};
+undo = window.undo;
+</script>
+
+
+<script>
+/* ===== Advance v23 undo last event: score or substitution ===== */
+
+function recalcCurrentSetStateFromHistoryV23() {
+  const homeStartValue = document.getElementById("startHomeRotation")?.value || "1";
+  const awayStartValue = document.getElementById("startAwayRotation")?.value || "-";
+  const startServerValue = document.getElementById("startServer")?.value || "home";
+
+  let calcHomeScore = 0;
+  let calcAwayScore = 0;
+  let calcHomeRotation = homeStartValue === "-" ? "-" : Number(homeStartValue);
+  let calcAwayRotation = awayStartValue === "-" ? "-" : Number(awayStartValue);
+  let calcServer = startServerValue;
+  let calcPlayers = buildPlayersFromStarterForRotationForUndo(calcHomeRotation);
+
+  const currentItems = history.filter(item => item.setNumber === setNumber);
+
+  currentItems.forEach(item => {
+    if (item.eventType === "substitution") {
+      item.homeScore = calcHomeScore;
+      item.awayScore = calcAwayScore;
+      item.homeRotation = calcHomeRotation;
+      item.awayRotation = calcAwayRotation;
+      item.server = calcServer;
+
+      if (item.playerPosition) {
+        calcPlayers[item.playerPosition] = item.inNumber || "ー";
+      }
+      return;
+    }
+
+    item.eventType = item.eventType || "score";
+    item.beforeServer = calcServer;
+    item.beforeHomeRotation = calcHomeRotation;
+    item.beforeAwayRotation = calcAwayRotation;
+
+    if (item.scoredTeam === "home") {
+      calcHomeScore++;
+      if (calcServer === "away") {
+        if (calcHomeRotation !== "-") {
+          calcHomeRotation++;
+          if (calcHomeRotation > 6) calcHomeRotation = 1;
+        }
+        rotatePlayersOnceForUndo(calcPlayers);
+        calcServer = "home";
+      }
+    } else if (item.scoredTeam === "away") {
+      calcAwayScore++;
+      if (calcServer === "home") {
+        if (calcAwayRotation !== "-") {
+          calcAwayRotation++;
+          if (calcAwayRotation > 6) calcAwayRotation = 1;
+        }
+        calcServer = "away";
+      }
+    }
+
+    item.homeScore = calcHomeScore;
+    item.awayScore = calcAwayScore;
+    item.homeRotation = calcHomeRotation;
+    item.awayRotation = calcAwayRotation;
+    item.server = calcServer;
+  });
+
+  homeScore = calcHomeScore;
+  awayScore = calcAwayScore;
+  homeRotation = calcHomeRotation;
+  awayRotation = calcAwayRotation;
+  servingTeam = currentItems.length ? calcServer : null;
+  activeCourtPlayers = currentItems.length ? clonePlayersForUndo(calcPlayers) : null;
+}
+
+window.undo = function () {
+  const currentSetEvents = history.filter(item => item.setNumber === setNumber);
+
+  if (
+    setNumber > 1 &&
+    homeScore === 0 &&
+    awayScore === 0 &&
+    currentSetEvents.length === 0
+  ) {
+    const prevSetNumber = setNumber - 1;
+    const prevResult = setResults.find(s => s.setNumber === prevSetNumber);
+
+    if (prevResult) {
+      const ok = confirm(
+        `前のセットに戻しますか？\nSET${prevSetNumber} ${prevResult.homeScore}-${prevResult.awayScore} に戻ります。`
+      );
+
+      if (!ok) return;
+
+      setNumber = prevSetNumber;
+      setResults = setResults.filter(s => s.setNumber !== prevSetNumber);
+
+      homeScore = prevResult.homeScore;
+      awayScore = prevResult.awayScore;
+
+      recalcCurrentSetStateFromHistoryV23();
+
+      statsView = "current";
+      historyView = "current";
+      markDirty();
+      updateLiveCourt();
+      updateDisplay();
+    }
+
+    return;
+  }
+
+  if (currentSetEvents.length === 0) return;
+
+  let lastEventIndex = -1;
+
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].setNumber === setNumber) {
+      lastEventIndex = i;
+      break;
+    }
+  }
+
+  if (lastEventIndex < 0) return;
+
+  const lastEvent = history[lastEventIndex];
+  const label = lastEvent.eventType === "substitution"
+    ? `交代 ${formatMemberLabel(lastEvent.outNumber)} → ${formatMemberLabel(lastEvent.inNumber)}`
+    : `得点 ${lastEvent.homeScore}-${lastEvent.awayScore}`;
+
+  const ok = confirm(`直前の記録を戻しますか？\n${label}`);
+  if (!ok) return;
+
+  history.splice(lastEventIndex, 1);
+
+  recalcCurrentSetStateFromHistoryV23();
+
+  historyView = "current";
+  statsView = "current";
+  markDirty();
+  updateLiveCourt();
+  updateDisplay();
+};
+undo = window.undo;
 </script>
 
 </body>

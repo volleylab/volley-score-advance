@@ -1599,6 +1599,71 @@ textarea {
   background: #fafafa;
 }
 
+
+/* ===== Advance v24 modal scroll fixes ===== */
+.modal-bg {
+  align-items: center;
+  padding: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal {
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+#rosterModal,
+#memberSelectModal {
+  align-items: center;
+}
+
+#rosterModal .modal,
+#memberSelectModal .modal {
+  max-height: calc(100vh - 28px);
+  display: flex;
+  flex-direction: column;
+}
+
+#rosterModal .modal-title,
+#rosterModal .modal-text,
+#memberSelectModal .modal-title,
+#memberSelectModal .modal-text {
+  flex: 0 0 auto;
+}
+
+#rosterList {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 46vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+  margin: 10px 0;
+}
+
+#memberSelectList {
+  flex: 1 1 auto;
+  min-height: 140px;
+  max-height: 58vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+  margin-bottom: 10px;
+}
+
+#memberSelectModal .cancel-btn,
+#rosterModal .primary-btn,
+#rosterModal .cancel-btn {
+  flex: 0 0 auto;
+}
+
+.roster-row {
+  grid-template-columns: 64px 1fr 42px;
+}
+
 </style>
 </head>
 

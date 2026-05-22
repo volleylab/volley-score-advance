@@ -1664,6 +1664,45 @@ textarea {
   grid-template-columns: 64px 1fr 42px;
 }
 
+/* ===== Level 1 common iPhone safety update ===== */
+html {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+.screen,
+.history,
+.modal,
+.modal-bg,
+#rosterList,
+#memberSelectList {
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-version {
+  text-align: right;
+  color: #999;
+  font-size: 11px;
+  font-weight: 900;
+  margin: 4px 4px 8px;
+  user-select: none;
+}
+
 </style>
 </head>
 
@@ -1695,6 +1734,7 @@ textarea {
     <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="importMatchesFromFile(event)" />
 
     <div id="matchList"></div>
+    <div class="app-version">v1.0.1</div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
   </div>
 
@@ -5111,6 +5151,45 @@ setStatsMode("point");
     display: none !important;
   }
 }
+/* ===== Level 1 common iPhone safety update ===== */
+html {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+.screen,
+.history,
+.modal,
+.modal-bg,
+#rosterList,
+#memberSelectList {
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-version {
+  text-align: right;
+  color: #999;
+  font-size: 11px;
+  font-weight: 900;
+  margin: 4px 4px 8px;
+  user-select: none;
+}
+
 </style>
 
 <script>

@@ -1703,6 +1703,63 @@ textarea {
   user-select: none;
 }
 
+
+/* ===== Advance v1.0.2 HOME roster snapshot + drag reorder ===== */
+.roster-row {
+  grid-template-columns: 34px 64px 1fr 42px !important;
+}
+
+.roster-drag-handle {
+  border: none;
+  background: #eef3ff;
+  color: #1557e6;
+  border-radius: 10px;
+  min-height: 38px;
+  font-size: 22px;
+  font-weight: 1000;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.roster-drag-handle:active {
+  cursor: grabbing;
+  transform: scale(0.97);
+}
+
+.roster-row.dragging {
+  opacity: .58;
+  background: #eef5ff;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px rgba(21,87,230,.18);
+}
+
+.match-only-add-btn {
+  width: 100%;
+  border: 1px dashed #1557e6;
+  background: #f5f8ff;
+  color: #1557e6;
+  border-radius: 12px;
+  padding: 13px 12px;
+  margin: 10px 0 8px;
+  font-size: 16px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.match-only-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff7d6;
+  color: #8a6500;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 </style>
 </head>
 
@@ -1734,7 +1791,7 @@ textarea {
     <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="importMatchesFromFile(event)" />
 
     <div id="matchList"></div>
-    <div class="app-version">v1.0.1</div>
+    <div class="app-version">v1.0.2</div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
   </div>
 
@@ -7266,6 +7323,400 @@ window.undo = function () {
   updateDisplay();
 };
 undo = window.undo;
+</script>
+
+
+<script>
+/* ===== Advance v1.0.2 HOME roster snapshot + match-only member add ===== */
+(function(){
+  const POS_EMPTY = "ー";
+  let currentMatchHomeTeamName = (typeof homeTeamName !== "undefined" ? homeTeamName : "HOME") || "HOME";
+  let currentMatchRoster = [];
+  let rosterDragIndex = null;
+
+  function cloneRoster(roster) {
+    return (Array.isArray(roster) ? roster : [])
+      .filter(p => p && String(p.number || "").trim() !== "")
+      .map(p => ({
+        number: String(p.number || "").trim(),
+        name: String(p.name || "").trim(),
+        matchOnly: !!p.matchOnly
+      }));
+  }
+
+  function getMasterRosterSnapshot() {
+    if (typeof normalizeRoster === "function") normalizeRoster();
+    return cloneRoster(typeof homeRoster !== "undefined" ? homeRoster : []);
+  }
+
+  function ensureCurrentMatchRoster() {
+    if (!Array.isArray(currentMatchRoster) || currentMatchRoster.length === 0) {
+      currentMatchRoster = getMasterRosterSnapshot();
+    }
+    return currentMatchRoster;
+  }
+
+  window.getActiveHomeRoster = function() {
+    return cloneRoster(ensureCurrentMatchRoster());
+  };
+
+  window.getActiveHomeTeamName = function() {
+    return (currentMatchHomeTeamName || homeTeamName || "HOME").trim() || "HOME";
+  };
+
+  function setCurrentMatchSnapshot(name, roster) {
+    currentMatchHomeTeamName = (name || homeTeamName || "HOME").trim() || "HOME";
+    currentMatchRoster = cloneRoster(roster && roster.length ? roster : getMasterRosterSnapshot());
+  }
+
+  function findMember(number) {
+    const roster = window.getActiveHomeRoster();
+    return roster.find(p => String(p.number) === String(number));
+  }
+
+  window.formatMemberLabel = function(number) {
+    if (!number || number === POS_EMPTY) return POS_EMPTY;
+    const player = findMember(number);
+    return player && player.name ? `#${number} ${player.name}` : `#${number}`;
+  };
+  if (typeof formatMemberLabel !== "undefined") formatMemberLabel = window.formatMemberLabel;
+
+  function syncMasterInputsBeforeReorder() {
+    document.querySelectorAll("#rosterList .roster-row").forEach(row => {
+      const index = Number(row.dataset.index);
+      if (!Number.isInteger(index) || !homeRoster[index]) return;
+      const inputs = row.querySelectorAll("input");
+      if (inputs[0]) homeRoster[index].number = inputs[0].value;
+      if (inputs[1]) homeRoster[index].name = inputs[1].value;
+    });
+  }
+
+  function moveRosterItem(from, to) {
+    if (!Array.isArray(homeRoster)) homeRoster = [];
+    if (from === to || from < 0 || to < 0 || from >= homeRoster.length || to >= homeRoster.length) return;
+    const item = homeRoster.splice(from, 1)[0];
+    homeRoster.splice(to, 0, item);
+  }
+
+  function onRosterPointerMove(e) {
+    if (rosterDragIndex === null) return;
+    e.preventDefault();
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const row = el && el.closest ? el.closest("#rosterList .roster-row") : null;
+    if (!row) return;
+    const targetIndex = Number(row.dataset.index);
+    if (!Number.isInteger(targetIndex) || targetIndex === rosterDragIndex) return;
+    syncMasterInputsBeforeReorder();
+    moveRosterItem(rosterDragIndex, targetIndex);
+    rosterDragIndex = targetIndex;
+    window.renderRosterRows();
+    const dragging = document.querySelector(`#rosterList .roster-row[data-index="${rosterDragIndex}"]`);
+    if (dragging) dragging.classList.add("dragging");
+  }
+
+  function stopRosterDrag() {
+    if (rosterDragIndex === null) return;
+    rosterDragIndex = null;
+    document.removeEventListener("pointermove", onRosterPointerMove);
+    document.removeEventListener("pointerup", stopRosterDrag);
+    document.removeEventListener("pointercancel", stopRosterDrag);
+    document.querySelectorAll("#rosterList .roster-row.dragging").forEach(el => el.classList.remove("dragging"));
+  }
+
+  window.startRosterDrag = function(e, index) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!Array.isArray(homeRoster) || homeRoster.length <= 1) return;
+    syncMasterInputsBeforeReorder();
+    rosterDragIndex = index;
+    document.addEventListener("pointermove", onRosterPointerMove, { passive:false });
+    document.addEventListener("pointerup", stopRosterDrag);
+    document.addEventListener("pointercancel", stopRosterDrag);
+    const row = document.querySelector(`#rosterList .roster-row[data-index="${index}"]`);
+    if (row) row.classList.add("dragging");
+  };
+
+  window.renderRosterRows = function () {
+    const list = document.getElementById("rosterList");
+    if (!list) return;
+
+    if (!Array.isArray(homeRoster)) homeRoster = [];
+
+    if (homeRoster.length === 0) {
+      homeRoster = [
+        { number: "1", name: "" },
+        { number: "2", name: "" },
+        { number: "3", name: "" },
+        { number: "4", name: "" },
+        { number: "5", name: "" },
+        { number: "6", name: "" }
+      ];
+    }
+
+    list.innerHTML = "";
+
+    homeRoster.forEach((p, index) => {
+      const row = document.createElement("div");
+      row.className = "roster-row";
+      row.dataset.index = String(index);
+      row.innerHTML = `
+        <button class="roster-drag-handle" type="button" aria-label="並び替え" onpointerdown="window.startRosterDrag(event, ${index})">≡</button>
+        <input value="${escapeHtml(p.number)}" placeholder="背番号" oninput="homeRoster[${index}].number=this.value">
+        <input value="${escapeHtml(p.name)}" placeholder="名前" oninput="homeRoster[${index}].name=this.value">
+        <button class="small-danger-btn" type="button" onclick="window.removeRosterRow(${index})">×</button>
+      `;
+      list.appendChild(row);
+    });
+  };
+  if (typeof renderRosterRows !== "undefined") renderRosterRows = window.renderRosterRows;
+
+  window.addRosterRow = function () {
+    if (!Array.isArray(homeRoster)) homeRoster = [];
+    syncMasterInputsBeforeReorder();
+    homeRoster.push({ number: "", name: "" });
+    window.renderRosterRows();
+  };
+  if (typeof addRosterRow !== "undefined") addRosterRow = window.addRosterRow;
+
+  window.removeRosterRow = function (index) {
+    if (!Array.isArray(homeRoster)) homeRoster = [];
+    syncMasterInputsBeforeReorder();
+    homeRoster.splice(index, 1);
+    window.renderRosterRows();
+  };
+  if (typeof removeRosterRow !== "undefined") removeRosterRow = window.removeRosterRow;
+
+  window.openSettingsModal = function () {
+    const nameInput = document.getElementById("homeTeamNameInput");
+    if (nameInput) {
+      const savedAdvance = localStorage.getItem("advanceHomeTeamName");
+      let savedLegacy = "";
+      try { savedLegacy = (JSON.parse(localStorage.getItem("volleyPlusSettings")) || {}).homeTeamName || ""; } catch (e) {}
+      const currentName = savedAdvance || savedLegacy || "HOME";
+      nameInput.value = currentName || "HOME";
+    }
+
+    try {
+      const savedRoster = JSON.parse(localStorage.getItem("advanceHomeRoster") || "[]");
+      homeRoster = Array.isArray(savedRoster) ? savedRoster : [];
+    } catch(e) {
+      if (!Array.isArray(homeRoster)) homeRoster = [];
+    }
+
+    window.renderRosterRows();
+    const modal = document.getElementById("rosterModal");
+    if (modal) modal.style.display = "flex";
+  };
+  if (typeof openSettingsModal !== "undefined") openSettingsModal = window.openSettingsModal;
+
+  const originalSaveRosterSettingsV102 = window.saveRosterSettings || saveRosterSettings;
+  window.saveRosterSettings = function () {
+    syncMasterInputsBeforeReorder();
+    const nameInput = document.getElementById("homeTeamNameInput");
+    homeTeamName = (nameInput?.value || "HOME").trim() || "HOME";
+    if (typeof normalizeRoster === "function") normalizeRoster();
+    localStorage.setItem("advanceHomeTeamName", homeTeamName);
+    localStorage.setItem("advanceHomeRoster", JSON.stringify(homeRoster));
+    localStorage.setItem("volleyPlusSettings", JSON.stringify({ homeTeamName }));
+    if (!currentMatchId && (!history || history.length === 0) && homeScore === 0 && awayScore === 0) {
+      setCurrentMatchSnapshot(homeTeamName, homeRoster);
+    }
+    if (typeof closeRosterModal === "function") closeRosterModal();
+    if (typeof updateLiveCourt === "function") updateLiveCourt();
+  };
+  if (typeof saveRosterSettings !== "undefined") saveRosterSettings = window.saveRosterSettings;
+
+  function addMatchOnlyMemberAndSelect() {
+    ensureCurrentMatchRoster();
+    const number = prompt("この試合だけ追加する選手の背番号を入力してください");
+    if (number === null) return;
+    const cleanNumber = String(number).trim();
+    if (!cleanNumber) return;
+
+    const existing = currentMatchRoster.find(p => String(p.number) === cleanNumber);
+    if (existing) {
+      alert("同じ背番号の選手がすでに登録されています。");
+      return;
+    }
+
+    const name = prompt("選手名を入力してください（空欄でもOK）") || "";
+    currentMatchRoster.push({ number: cleanNumber, name: String(name).trim(), matchOnly: true });
+    if (typeof markDirty === "function") markDirty();
+
+    if (pendingMemberSelectMode === "substitution") {
+      if (typeof completeSubstitution === "function") completeSubstitution(cleanNumber);
+    } else {
+      if (typeof selectMemberForPosition === "function") selectMemberForPosition(cleanNumber);
+    }
+  }
+
+  function renderMemberSelectList(pos, mode = "starter", reasonData = null) {
+    pendingMemberPosition = pos;
+    pendingMemberSelectMode = mode;
+    pendingReasonData = reasonData;
+
+    const title = document.getElementById("memberSelectTitle");
+    const text = document.getElementById("memberSelectText");
+    const list = document.getElementById("memberSelectList");
+    if (!list) return;
+
+    if (title) title.textContent = mode === "score" ? "プレーした選手を選択" : mode === "substitution" ? "選手交代" : "スタートメンバーを選択";
+    if (text) {
+      if (mode === "score") text.textContent = `${reasonData?.reason || ""} を記録する選手を選んでください`;
+      else if (mode === "substitution") text.textContent = `${window.formatMemberLabel(pendingSubstitutionOutNumber)} → IN選手を選択`;
+      else text.textContent = "この場所に入る選手を選んでください";
+    }
+
+    list.innerHTML = "";
+
+    if (mode !== "substitution") {
+      const unset = document.createElement("button");
+      unset.className = "member-option unset";
+      unset.textContent = "ー 未設定";
+      unset.onclick = () => selectMemberForPosition(POS_EMPTY);
+      list.appendChild(unset);
+    }
+
+    window.getActiveHomeRoster().forEach(player => {
+      if (!player.number) return;
+      const btn = document.createElement("button");
+      btn.className = "member-option";
+      if (mode === "substitution" && String(player.number) === String(pendingSubstitutionOutNumber)) {
+        btn.classList.add("current");
+      }
+      btn.innerHTML = `#${escapeHtml(player.number)} <span class="member-name">${escapeHtml(player.name || "")}</span>${player.matchOnly ? '<span class="match-only-badge">この試合のみ</span>' : ''}`;
+      btn.onclick = () => {
+        if (mode === "substitution") completeSubstitution(player.number);
+        else selectMemberForPosition(player.number);
+      };
+      list.appendChild(btn);
+    });
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "match-only-add-btn";
+    addBtn.type = "button";
+    addBtn.textContent = "＋ この試合に選手を追加";
+    addBtn.onclick = addMatchOnlyMemberAndSelect;
+    list.appendChild(addBtn);
+
+    // すでにコート内にいる選手の見た目だけ薄くする（既存の重複ガードと併用）
+    if (typeof isPlayerAlreadyOnCourt === "function") {
+      const checkMode = mode === "starter" ? "starter" : "substitution";
+      list.querySelectorAll(".member-option").forEach(btn => {
+        const match = (btn.textContent || "").match(/#(\S+)/);
+        if (!match) return;
+        const number = match[1];
+        if (isPlayerAlreadyOnCourt(number, checkMode, pos)) {
+          btn.style.opacity = "0.45";
+          btn.style.background = "#f1f1f1";
+          btn.title = "すでにコート内にいます";
+        }
+      });
+    }
+  }
+
+  window.openMemberSelectModal = function(pos, mode = "starter", reasonData = null) {
+    renderMemberSelectList(pos, mode, reasonData);
+    const modal = document.getElementById("memberSelectModal");
+    if (modal) modal.style.display = "flex";
+  };
+  if (typeof openMemberSelectModal !== "undefined") openMemberSelectModal = window.openMemberSelectModal;
+
+  window.openSubstitutionModal = function(pos) {
+    if (typeof ensureActiveCourtPlayers === "function") ensureActiveCourtPlayers();
+    pendingSubstitutionPosition = pos;
+    pendingSubstitutionOutNumber = (typeof activeCourtPlayers !== "undefined" && activeCourtPlayers) ? (activeCourtPlayers[pos] || POS_EMPTY) : POS_EMPTY;
+    renderMemberSelectList(pos, "substitution", null);
+    const modal = document.getElementById("memberSelectModal");
+    if (modal) modal.style.display = "flex";
+  };
+  if (typeof openSubstitutionModal !== "undefined") openSubstitutionModal = window.openSubstitutionModal;
+
+  const originalRenderPlayerStatsV102 = window.renderPlayerStats || (typeof renderPlayerStats !== "undefined" ? renderPlayerStats : null);
+  if (originalRenderPlayerStatsV102) {
+    window.renderPlayerStats = function(items) {
+      const originalRoster = homeRoster;
+      try {
+        homeRoster = window.getActiveHomeRoster();
+        return originalRenderPlayerStatsV102(items);
+      } finally {
+        homeRoster = originalRoster;
+      }
+    };
+    if (typeof renderPlayerStats !== "undefined") renderPlayerStats = window.renderPlayerStats;
+  }
+
+  const originalNewMatchV102 = window.newMatch || newMatch;
+  window.newMatch = function() {
+    setCurrentMatchSnapshot(homeTeamName || localStorage.getItem("advanceHomeTeamName") || "HOME", getMasterRosterSnapshot());
+    originalNewMatchV102();
+  };
+  if (typeof newMatch !== "undefined") newMatch = window.newMatch;
+
+  const originalSaveMatchV102 = window.saveMatch || saveMatch;
+  window.saveMatch = function(goBack = false) {
+    ensureCurrentMatchRoster();
+    originalSaveMatchV102(false);
+    const idx = matches.findIndex(m => m.id === currentMatchId);
+    if (idx >= 0) {
+      matches[idx].homeTeamName = window.getActiveHomeTeamName();
+      matches[idx].homeRoster = window.getActiveHomeRoster();
+      localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
+    }
+    isDirty = false;
+    if (goBack) goList();
+    else {
+      // 元のsaveMatchがalert済みのため、ここでは追加通知しない
+      if (typeof updateDisplay === "function") updateDisplay();
+    }
+  };
+  if (typeof saveMatch !== "undefined") saveMatch = window.saveMatch;
+
+  const originalOpenMatchV102 = window.openMatch || openMatch;
+  window.openMatch = function(id) {
+    const match = matches.find(m => m.id === id);
+    setCurrentMatchSnapshot(
+      match?.homeTeamName || homeTeamName || "HOME",
+      match?.homeRoster || getMasterRosterSnapshot()
+    );
+    originalOpenMatchV102(id);
+    if (typeof updateDisplay === "function") updateDisplay();
+    if (typeof updateLiveCourt === "function") updateLiveCourt();
+  };
+  if (typeof openMatch !== "undefined") openMatch = window.openMatch;
+
+  // 既存試合・インポート試合にスナップショットがない場合の互換補完
+  const originalNormalizeAdvanceMatchV102 = window.normalizeAdvanceMatch || (typeof normalizeAdvanceMatch !== "undefined" ? normalizeAdvanceMatch : null);
+  if (originalNormalizeAdvanceMatchV102) {
+    window.normalizeAdvanceMatch = function(match) {
+      const base = originalNormalizeAdvanceMatchV102(match);
+      return {
+        ...base,
+        homeTeamName: base.homeTeamName || homeTeamName || "HOME",
+        homeRoster: cloneRoster(base.homeRoster || getMasterRosterSnapshot())
+      };
+    };
+    if (typeof normalizeAdvanceMatch !== "undefined") normalizeAdvanceMatch = window.normalizeAdvanceMatch;
+  }
+
+  const originalNormalizePlusMatchV102 = window.normalizePlusMatchToAdvance || (typeof normalizePlusMatchToAdvance !== "undefined" ? normalizePlusMatchToAdvance : null);
+  if (originalNormalizePlusMatchV102) {
+    window.normalizePlusMatchToAdvance = function(match) {
+      const base = originalNormalizePlusMatchV102(match);
+      return {
+        ...base,
+        homeTeamName: base.homeTeamName || homeTeamName || "HOME",
+        homeRoster: cloneRoster(base.homeRoster || getMasterRosterSnapshot())
+      };
+    };
+    if (typeof normalizePlusMatchToAdvance !== "undefined") normalizePlusMatchToAdvance = window.normalizePlusMatchToAdvance;
+  }
+
+  // 起動時の初期値
+  setCurrentMatchSnapshot(homeTeamName || "HOME", getMasterRosterSnapshot());
+})();
 </script>
 
 </body>

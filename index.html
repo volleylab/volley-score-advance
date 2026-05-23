@@ -1704,7 +1704,7 @@ textarea {
 }
 
 
-/* ===== Advance v1.0.2 HOME roster snapshot + drag reorder ===== */
+/* ===== Advance v1.0.3 HOME roster snapshot + drag reorder ===== */
 .roster-row {
   grid-template-columns: 34px 64px 1fr 42px !important;
 }
@@ -1761,10 +1761,50 @@ textarea {
 }
 
 </style>
+
+<style>
+/* ===== Advance v1.0.3 update checker ===== */
+.update-badge {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 430px;
+  margin: 0 auto;
+  background: #111;
+  color: white;
+  border-radius: 999px;
+  padding: 10px 12px 10px 16px;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 6px 20px rgba(0,0,0,.24);
+}
+.update-badge.show { display: flex; }
+.update-badge button {
+  border: none;
+  background: white;
+  color: #1557e6;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 900;
+}
+.offline-badge.show + .update-badge.show { bottom: 54px; }
+</style>
+
 </head>
 
 <body>
 <div class="offline-badge" id="offlineBadge">オフライン使用中</div>
+<div class="update-badge" id="updateBadge">
+  <span>最新版があります</span>
+  <button type="button" onclick="applyAppUpdate()">↻ 更新する</button>
+</div>
 <div class="app">
 
   <div id="listScreen" class="screen active">
@@ -1791,7 +1831,7 @@ textarea {
     <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="importMatchesFromFile(event)" />
 
     <div id="matchList"></div>
-    <div class="app-version">v1.0.2</div>
+    <div class="app-version">v1.0.3</div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
   </div>
 
@@ -7327,7 +7367,7 @@ undo = window.undo;
 
 
 <script>
-/* ===== Advance v1.0.2 HOME roster snapshot + match-only member add ===== */
+/* ===== Advance v1.0.3 HOME roster snapshot + match-only member add ===== */
 (function(){
   const POS_EMPTY = "ー";
   let currentMatchHomeTeamName = (typeof homeTeamName !== "undefined" ? homeTeamName : "HOME") || "HOME";
@@ -7717,6 +7757,81 @@ undo = window.undo;
   // 起動時の初期値
   setCurrentMatchSnapshot(homeTeamName || "HOME", getMasterRosterSnapshot());
 })();
+</script>
+
+<script>
+/* ===== Advance v1.0.3 version update checker ===== */
+const APP_VERSION = "1.0.3";
+const VERSION_JSON_URL = "version.json";
+
+function setAppVersionLabel() {
+  document.querySelectorAll(".app-version").forEach(el => {
+    el.textContent = "v" + APP_VERSION;
+  });
+}
+
+function compareVersionText(a, b) {
+  const pa = String(a || "").split(".").map(n => parseInt(n, 10) || 0);
+  const pb = String(b || "").split(".").map(n => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function showUpdateBadge() {
+  const badge = document.getElementById("updateBadge");
+  if (badge) badge.classList.add("show");
+}
+
+async function checkAppUpdate() {
+  try {
+    setAppVersionLabel();
+
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        try { await registration.update(); } catch (e) {}
+      }
+    }
+
+    const res = await fetch(VERSION_JSON_URL + "?t=" + Date.now(), {
+      cache: "no-store"
+    });
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const latest = String(data.version || "").trim();
+    if (latest && compareVersionText(latest, APP_VERSION) > 0) {
+      showUpdateBadge();
+    }
+  } catch (e) {
+    // オフライン時やversion.json未設置時は何もしない
+  }
+}
+
+async function applyAppUpdate() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        try { await registration.update(); } catch (e) {}
+      }
+    }
+    if (window.caches) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+      } catch (e) {}
+    }
+  } finally {
+    window.location.href = window.location.pathname + "?v=" + Date.now();
+  }
+}
+
+window.addEventListener("load", checkAppUpdate);
 </script>
 
 </body>

@@ -1704,7 +1704,7 @@ textarea {
 }
 
 
-/* ===== Advance v1.0.3 HOME roster snapshot + drag reorder ===== */
+/* ===== Advance v1.0.4 HOME roster snapshot + drag reorder ===== */
 .roster-row {
   grid-template-columns: 34px 64px 1fr 42px !important;
 }
@@ -1763,7 +1763,7 @@ textarea {
 </style>
 
 <style>
-/* ===== Advance v1.0.3 update checker ===== */
+/* ===== Advance v1.0.4 update checker ===== */
 .update-badge {
   position: fixed;
   left: 12px;
@@ -1831,7 +1831,7 @@ textarea {
     <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="importMatchesFromFile(event)" />
 
     <div id="matchList"></div>
-    <div class="app-version">v1.0.3</div>
+    <div class="app-version">v1.0.4</div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
   </div>
 
@@ -1915,7 +1915,7 @@ textarea {
 
           <div>
             <label>開始サーバー</label>
-            <select id="startServer" onchange="markDirty()">
+            <select id="startServer" onchange="syncStartServerSetting(); markDirty();">
               <option value="home">HOME</option>
               <option value="away">AWAY</option>
             </select>
@@ -7367,7 +7367,7 @@ undo = window.undo;
 
 
 <script>
-/* ===== Advance v1.0.3 HOME roster snapshot + match-only member add ===== */
+/* ===== Advance v1.0.4 HOME roster snapshot + match-only member add ===== */
 (function(){
   const POS_EMPTY = "ー";
   let currentMatchHomeTeamName = (typeof homeTeamName !== "undefined" ? homeTeamName : "HOME") || "HOME";
@@ -7759,9 +7759,223 @@ undo = window.undo;
 })();
 </script>
 
+
+
 <script>
-/* ===== Advance v1.0.3 version update checker ===== */
-const APP_VERSION = "1.0.3";
+/* ===== Advance v1.0.4 serve sync + other-player selection + report name fit ===== */
+(function(){
+  function hasCurrentSetScoreDataForV104() {
+    try {
+      return homeScore > 0 || awayScore > 0 || (history || []).some(item => item.setNumber === setNumber && item.eventType !== "substitution");
+    } catch (e) {
+      return false;
+    }
+  }
+
+  window.syncStartServerSetting = function(force = false) {
+    const select = document.getElementById("startServer");
+    if (!select) return;
+
+    if (force || !hasCurrentSetScoreDataForV104()) {
+      servingTeam = select.value || "home";
+      if (typeof updateServeChip === "function") updateServeChip();
+      if (typeof updateDisplay === "function") updateDisplay();
+      if (typeof updateLiveCourt === "function") updateLiveCourt();
+    }
+  };
+
+  window.addEventListener("DOMContentLoaded", function(){
+    const select = document.getElementById("startServer");
+    if (select && !select.dataset.v104ServeSync) {
+      select.dataset.v104ServeSync = "1";
+      select.addEventListener("change", function(){
+        window.syncStartServerSetting(false);
+      });
+    }
+  });
+
+  const originalStartMatchV104 = window.startMatch || (typeof startMatch !== "undefined" ? startMatch : null);
+  if (originalStartMatchV104) {
+    window.startMatch = function() {
+      const shouldSync = !hasCurrentSetScoreDataForV104();
+      originalStartMatchV104.apply(this, arguments);
+      if (shouldSync) {
+        window.syncStartServerSetting(true);
+      }
+    };
+    if (typeof startMatch !== "undefined") startMatch = window.startMatch;
+  }
+
+  function ensureOtherPlayersBox() {
+    let box = document.getElementById("otherPlayerSelectBox");
+    if (box) return box;
+
+    const court = document.getElementById("selectCourt");
+    if (!court || !court.parentNode) return null;
+
+    box = document.createElement("div");
+    box.id = "otherPlayerSelectBox";
+    box.className = "other-player-box";
+    court.insertAdjacentElement("afterend", box);
+    return box;
+  }
+
+  function getCurrentCourtNumberSet() {
+    let players = {};
+    try {
+      players = typeof getRotatedPlayersForCurrentRotation === "function" ? getRotatedPlayersForCurrentRotation() : {};
+    } catch (e) {
+      players = {};
+    }
+    return new Set(Object.values(players || {}).filter(n => n && n !== "ー").map(n => String(n)));
+  }
+
+  function renderOtherPlayersForOtherMiss() {
+    const box = ensureOtherPlayersBox();
+    if (!box) return;
+
+    const reason = pendingReasonData && pendingReasonData.reason;
+    if (reason !== "その他のミス") {
+      box.style.display = "none";
+      box.innerHTML = "";
+      return;
+    }
+
+    const courtSet = getCurrentCourtNumberSet();
+    const roster = typeof window.getActiveHomeRoster === "function" ? window.getActiveHomeRoster() : (Array.isArray(homeRoster) ? homeRoster : []);
+    const others = roster.filter(p => p && p.number && !courtSet.has(String(p.number)));
+
+    box.style.display = "block";
+    const buttons = others.map(p => {
+      const label = `#${escapeHtml(p.number)}${p.name ? " " + escapeHtml(p.name) : ""}${p.matchOnly ? "（この試合のみ）" : ""}`;
+      return `<button class="other-player-btn" type="button" data-number="${escapeHtml(p.number)}">${label}</button>`;
+    }).join("");
+
+    box.innerHTML = `
+      <div class="other-player-title">その他の選手</div>
+      <div class="other-player-help">リベロ・ベンチ選手など、現在コートにいない選手を選べます。</div>
+      <div class="other-player-list">
+        ${buttons || '<div class="other-player-empty">コート外の登録選手はいません</div>'}
+      </div>
+    `;
+
+    box.querySelectorAll(".other-player-btn").forEach(btn => {
+      btn.addEventListener("click", function(){
+        if (!pendingReasonData) return;
+        const number = this.dataset.number || "ー";
+        addPointWithPlayer(pendingReasonData.team, pendingReasonData.reason, "other", number);
+        if (typeof closePlayerCourtSelectModal === "function") closePlayerCourtSelectModal();
+      });
+    });
+  }
+
+  const originalOpenPlayerCourtSelectModalV104 = window.openPlayerCourtSelectModal || (typeof openPlayerCourtSelectModal !== "undefined" ? openPlayerCourtSelectModal : null);
+  if (originalOpenPlayerCourtSelectModalV104) {
+    window.openPlayerCourtSelectModal = function(team, reason) {
+      originalOpenPlayerCourtSelectModalV104.apply(this, arguments);
+      renderOtherPlayersForOtherMiss();
+    };
+    if (typeof openPlayerCourtSelectModal !== "undefined") openPlayerCourtSelectModal = window.openPlayerCourtSelectModal;
+  }
+
+  const originalClosePlayerCourtSelectModalV104 = window.closePlayerCourtSelectModal || (typeof closePlayerCourtSelectModal !== "undefined" ? closePlayerCourtSelectModal : null);
+  if (originalClosePlayerCourtSelectModalV104) {
+    window.closePlayerCourtSelectModal = function() {
+      const box = document.getElementById("otherPlayerSelectBox");
+      if (box) {
+        box.style.display = "none";
+        box.innerHTML = "";
+      }
+      originalClosePlayerCourtSelectModalV104.apply(this, arguments);
+    };
+    if (typeof closePlayerCourtSelectModal !== "undefined") closePlayerCourtSelectModal = window.closePlayerCourtSelectModal;
+  }
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .other-player-box {
+      margin: 8px auto 12px;
+      max-width: 350px;
+      text-align: left;
+      background: #f8f8f8;
+      border: 1px solid #e2e2e2;
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .other-player-title {
+      font-size: 14px;
+      font-weight: 1000;
+      color: #222;
+      margin-bottom: 4px;
+    }
+    .other-player-help {
+      font-size: 11px;
+      font-weight: 800;
+      color: #666;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+    .other-player-list {
+      display: grid;
+      gap: 6px;
+      max-height: 118px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .other-player-btn {
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 10px;
+      padding: 10px 11px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 900;
+      color: #222;
+    }
+    .other-player-empty {
+      font-size: 12px;
+      color: #777;
+      font-weight: 800;
+      padding: 8px 2px;
+      text-align: center;
+    }
+
+    .report-rate-team,
+    .report-team-name {
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.15;
+    }
+    .report-rate-team {
+      font-size: clamp(12px, 2.6vw, 16px) !important;
+      white-space: normal !important;
+    }
+    .report-rate-card {
+      min-width: 0;
+      overflow: hidden;
+    }
+    .report-rate-main {
+      min-width: 0;
+    }
+    .report-rate-row {
+      min-width: 0;
+    }
+    @media print {
+      .report-rate-team {
+        font-size: 12px !important;
+        line-height: 1.12 !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+</script>
+
+<script>
+/* ===== Advance v1.0.4 version update checker ===== */
+const APP_VERSION = "1.0.4";
 const VERSION_JSON_URL = "version.json";
 
 function setAppVersionLabel() {
